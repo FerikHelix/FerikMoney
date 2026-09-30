@@ -92,9 +92,7 @@ class _Segment extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
               decoration: BoxDecoration(
                 color: selected
-                    ? context.isFerikDark
-                          ? color.withValues(alpha: 0.14)
-                          : selectedBackground
+                    ? context.ferikTint(color, selectedBackground)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
                 border: selected

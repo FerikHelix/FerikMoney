@@ -28,13 +28,7 @@ class MainShell extends GetView<MoneyController> {
         ),
         bottomNavigationBar: DecoratedBox(
           decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(
-                color: context.isFerikDark
-                    ? context.ferikColors.divider
-                    : context.ferikColors.borderSubtle,
-              ),
-            ),
+            border: Border(top: BorderSide(color: context.ferikHairline)),
           ),
           child: NavigationBar(
             selectedIndex: controller.navigationIndex.value,

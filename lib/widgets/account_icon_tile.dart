@@ -6,10 +6,9 @@ import '../utils/icon_mapper.dart';
 /// Accent color for an account type, tuned separately for light and dark.
 Color accountTypeColor(BuildContext context, String type) {
   final colors = context.ferikColors;
-  final dark = context.isFerikDark;
   return switch (type) {
     'bank' => colors.transfer,
-    'ewallet' => dark ? const Color(0xFFB9A1FF) : const Color(0xFF8B72BE),
+    'ewallet' => context.ferikViolet,
     'savings' => colors.warning,
     'other' => colors.secondaryText,
     _ => colors.income,
@@ -30,7 +29,7 @@ class AccountIconTile extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: context.isFerikDark ? 0.18 : 0.12),
+        color: context.ferikWash(color),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Icon(accountTypeIcon(type), size: size * 0.52, color: color),

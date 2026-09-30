@@ -88,117 +88,130 @@ class ReportsView extends GetView<ReportsController> {
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            _Summary(snapshot: snapshot, visible: visible),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'Tren Arus Kas',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            FerikCard(
-              child: snapshot.trend.isEmpty
-                  ? const EmptyState(
-                      compact: true,
-                      icon: Icons.show_chart_rounded,
-                      title: 'Belum cukup data',
-                      message:
-                          'Tren muncul setelah ada transaksi pada periode ini.',
-                    )
-                  : SizedBox(
-                      height: 180,
-                      child: CustomPaint(
-                        key: const Key('cash-flow-trend-chart'),
-                        painter: _TrendPainter(
-                          points: snapshot.trend,
-                          incomeColor: context.ferikColors.income,
-                          expenseColor: context.ferikColors.expense,
-                          gridColor: context.ferikColors.borderSubtle,
-                        ),
-                      ),
-                    ),
-            ),
-            if (expenseEntries.isNotEmpty) ...[
+            if (snapshot.income == 0 && snapshot.expense == 0) ...[
+              const SizedBox(height: AppSpacing.xl),
+              const EmptyState(
+                icon: Icons.donut_large_outlined,
+                title: 'Belum ada data di periode ini',
+                message:
+                    'Catat pemasukan atau pengeluaran, atau pilih periode lain '
+                    'untuk melihat ringkasan dan tren.',
+              ),
+            ] else ...[
+              const SizedBox(height: AppSpacing.md),
+              _Summary(snapshot: snapshot, visible: visible),
               const SizedBox(height: AppSpacing.lg),
               Text(
-                'Pengeluaran per Kategori',
+                'Tren Arus Kas',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: AppSpacing.xs),
               FerikCard(
-                child: Column(
-                  children: [
-                    ExpenseDonutChart(
-                      total: snapshot.expense,
-                      visible: visible,
-                      slices: [
-                        for (var i = 0; i < expenseEntries.length; i++)
-                          ExpenseChartSlice(
-                            value: expenseEntries[i].value,
-                            color: chartColors[i % chartColors.length],
+                child: snapshot.trend.isEmpty
+                    ? const EmptyState(
+                        compact: true,
+                        icon: Icons.show_chart_rounded,
+                        title: 'Belum cukup data',
+                        message:
+                            'Tren muncul setelah ada transaksi pada periode ini.',
+                      )
+                    : SizedBox(
+                        height: 180,
+                        child: CustomPaint(
+                          key: const Key('cash-flow-trend-chart'),
+                          painter: _TrendPainter(
+                            points: snapshot.trend,
+                            incomeColor: context.ferikColors.income,
+                            expenseColor: context.ferikColors.expense,
+                            gridColor: context.ferikColors.borderSubtle,
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    for (var i = 0; i < expenseEntries.length; i++)
-                      _CategoryLine(
-                        name:
-                            money.categoryById(expenseEntries[i].key)?.name ??
-                            'Kategori',
-                        amount: expenseEntries[i].value,
-                        percent: snapshot.expense == 0
-                            ? 0
-                            : (expenseEntries[i].value / snapshot.expense * 100)
-                                  .round(),
-                        color: chartColors[i % chartColors.length],
-                        visible: visible,
-                        onTap: () => _openCategory(
-                          money,
-                          snapshot,
-                          'expense',
-                          expenseEntries[i].key,
                         ),
                       ),
-                  ],
+              ),
+              if (expenseEntries.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'Pengeluaran per Kategori',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
-              ),
-            ],
-            if (incomeEntries.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'Pemasukan per Kategori',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              FerikCard(
-                child: Column(
-                  children: [
-                    for (var i = 0; i < incomeEntries.length; i++)
-                      _CategoryLine(
-                        name:
-                            money.categoryById(incomeEntries[i].key)?.name ??
-                            'Kategori',
-                        amount: incomeEntries[i].value,
-                        percent: snapshot.income == 0
-                            ? 0
-                            : (incomeEntries[i].value / snapshot.income * 100)
-                                  .round(),
-                        color: context.ferikColors.income,
+                const SizedBox(height: AppSpacing.xs),
+                FerikCard(
+                  child: Column(
+                    children: [
+                      ExpenseDonutChart(
+                        total: snapshot.expense,
                         visible: visible,
-                        onTap: () => _openCategory(
-                          money,
-                          snapshot,
-                          'income',
-                          incomeEntries[i].key,
-                        ),
+                        slices: [
+                          for (var i = 0; i < expenseEntries.length; i++)
+                            ExpenseChartSlice(
+                              value: expenseEntries[i].value,
+                              color: chartColors[i % chartColors.length],
+                            ),
+                        ],
                       ),
-                  ],
+                      const SizedBox(height: AppSpacing.md),
+                      for (var i = 0; i < expenseEntries.length; i++)
+                        _CategoryLine(
+                          name:
+                              money.categoryById(expenseEntries[i].key)?.name ??
+                              'Kategori',
+                          amount: expenseEntries[i].value,
+                          percent: snapshot.expense == 0
+                              ? 0
+                              : (expenseEntries[i].value /
+                                        snapshot.expense *
+                                        100)
+                                    .round(),
+                          color: chartColors[i % chartColors.length],
+                          visible: visible,
+                          onTap: () => _openCategory(
+                            money,
+                            snapshot,
+                            'expense',
+                            expenseEntries[i].key,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-            if (snapshot.expense > 0) ...[
-              const SizedBox(height: AppSpacing.lg),
-              _InsightCard(snapshot: snapshot, money: money),
+              ],
+              if (incomeEntries.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'Pemasukan per Kategori',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                FerikCard(
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < incomeEntries.length; i++)
+                        _CategoryLine(
+                          name:
+                              money.categoryById(incomeEntries[i].key)?.name ??
+                              'Kategori',
+                          amount: incomeEntries[i].value,
+                          percent: snapshot.income == 0
+                              ? 0
+                              : (incomeEntries[i].value / snapshot.income * 100)
+                                    .round(),
+                          color: context.ferikColors.income,
+                          visible: visible,
+                          onTap: () => _openCategory(
+                            money,
+                            snapshot,
+                            'income',
+                            incomeEntries[i].key,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+              if (snapshot.expense > 0) ...[
+                const SizedBox(height: AppSpacing.lg),
+                _InsightCard(snapshot: snapshot, money: money),
+              ],
             ],
           ],
         );

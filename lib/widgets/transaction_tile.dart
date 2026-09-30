@@ -41,14 +41,12 @@ class TransactionTile extends StatelessWidget {
       MoneyTone.transfer => colors.transfer,
       MoneyTone.neutral => colors.mainText,
     };
-    final semanticBackground = context.isFerikDark
-        ? semanticColor.withValues(alpha: 0.12)
-        : switch (tone) {
-            MoneyTone.income => colors.incomeSoft,
-            MoneyTone.expense => colors.expenseSoft,
-            MoneyTone.transfer => colors.transferSoft,
-            MoneyTone.neutral => colors.surfaceVariant,
-          };
+    final semanticBackground = context.ferikTint(semanticColor, switch (tone) {
+      MoneyTone.income => colors.incomeSoft,
+      MoneyTone.expense => colors.expenseSoft,
+      MoneyTone.transfer => colors.transferSoft,
+      MoneyTone.neutral => colors.surfaceVariant,
+    }, darkAlpha: 0.12);
     final hasNote = transaction.note?.trim().isNotEmpty == true;
     final title = hasNote
         ? transaction.note!.trim()
@@ -145,9 +143,7 @@ class TransactionTile extends StatelessWidget {
         if (showDivider)
           Padding(
             padding: const EdgeInsets.only(left: 66),
-            child: Divider(
-              color: context.isFerikDark ? colors.divider : colors.borderSubtle,
-            ),
+            child: Divider(color: context.ferikHairline),
           ),
       ],
     );

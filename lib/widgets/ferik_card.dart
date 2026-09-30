@@ -24,10 +24,8 @@ class FerikCard extends StatelessWidget {
     final radius = BorderRadius.circular(borderRadius);
     return Material(
       color: color ?? colors.surface,
-      elevation: context.isFerikDark ? 0 : 1,
-      shadowColor: context.isFerikDark
-          ? null
-          : Colors.black.withValues(alpha: 0.08),
+      elevation: 1,
+      shadowColor: context.ferikCardShadow,
       shape: RoundedRectangleBorder(
         borderRadius: radius,
         side: BorderSide(color: context.ferikCardBorder),

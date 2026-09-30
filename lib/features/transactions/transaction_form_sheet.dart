@@ -544,9 +544,7 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
                         decoration: InputDecoration(
                           labelText: 'Catatan (opsional)',
                           prefixIcon: const Icon(Icons.notes_rounded),
-                          fillColor: context.isFerikDark
-                              ? context.ferikColors.surfaceVariant
-                              : context.ferikColors.background,
+                          fillColor: context.ferikFieldFill,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -699,11 +697,7 @@ class _SelectorRow extends StatelessWidget {
       color: colors.surfaceVariant,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        side: BorderSide(
-          color: context.isFerikDark
-              ? colors.divider.withValues(alpha: 0.7)
-              : colors.borderStandard,
-        ),
+        side: BorderSide(color: context.ferikSelectorBorder),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -711,7 +705,7 @@ class _SelectorRow extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.sm,
-            vertical: 10,
+            vertical: AppSpacing.sm,
           ),
           child: Row(
             children: [
@@ -720,9 +714,7 @@ class _SelectorRow extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: context.isFerikDark
-                          ? colors.surface
-                          : colors.primarySoft,
+                      color: context.ferikSelectorIconBackground,
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Icon(icon, size: 19, color: colors.primary),

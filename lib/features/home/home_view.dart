@@ -67,7 +67,7 @@ class HomeView extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(7),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                     child: Image.asset(
                       'assets/branding/ferikmoney_icon.png',
                       width: 28,
@@ -465,9 +465,7 @@ class _TotalMoneyHero extends StatelessWidget {
                 width: 1,
                 height: 48,
                 margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                color: context.isFerikDark
-                    ? colors.divider
-                    : colors.primaryContainerStrong,
+                color: context.ferikContainerDivider,
               ),
               Expanded(
                 child: _HeroMetric(

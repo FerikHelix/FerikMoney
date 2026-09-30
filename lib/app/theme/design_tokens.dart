@@ -268,4 +268,45 @@ extension FerikThemeContext on BuildContext {
 
   Color get ferikInteractiveBorder =>
       isFerikDark ? ferikColors.divider : ferikColors.borderStandard;
+
+  // Light and dark differ in a few small ways. They are decided here, once, so
+  // widgets never need to check the brightness themselves.
+
+  /// Thin separator lines (navigation bar top edge, list dividers).
+  Color get ferikHairline =>
+      isFerikDark ? ferikColors.divider : ferikColors.borderSubtle;
+
+  /// Divider drawn on top of a green container such as the balance card.
+  Color get ferikContainerDivider =>
+      isFerikDark ? ferikColors.divider : ferikColors.primaryContainerStrong;
+
+  /// Fill of text fields that sit on a sheet.
+  Color get ferikFieldFill =>
+      isFerikDark ? ferikColors.surfaceVariant : ferikColors.background;
+
+  /// Outline of tappable selector rows.
+  Color get ferikSelectorBorder => isFerikDark
+      ? ferikColors.divider.withValues(alpha: 0.7)
+      : ferikColors.borderStandard;
+
+  /// Background behind the icon of a selector row.
+  Color get ferikSelectorIconBackground =>
+      isFerikDark ? ferikColors.surface : ferikColors.primarySoft;
+
+  /// Soft shadow under cards. Dark surfaces use a border instead of a shadow.
+  Color get ferikCardShadow =>
+      isFerikDark ? Colors.transparent : Colors.black.withValues(alpha: 0.08);
+
+  /// Background for an accent: the prepared soft color in light mode, a
+  /// translucent wash of the accent in dark mode.
+  Color ferikTint(Color accent, Color soft, {double darkAlpha = 0.14}) =>
+      isFerikDark ? accent.withValues(alpha: darkAlpha) : soft;
+
+  /// A translucent wash of [accent], slightly stronger in dark mode.
+  Color ferikWash(Color accent) =>
+      accent.withValues(alpha: isFerikDark ? 0.18 : 0.12);
+
+  /// Accent for e-wallet accounts.
+  Color get ferikViolet =>
+      isFerikDark ? const Color(0xFFB9A1FF) : const Color(0xFF8B72BE);
 }
