@@ -49,9 +49,27 @@ class _TransactionDetail extends StatelessWidget {
     );
     if (confirmed != true) return;
     try {
-      await Get.find<MoneyRepository>().deleteTransaction(transaction.id);
+      final money = Get.find<MoneyController>();
+      final repository = Get.find<MoneyRepository>();
+      final tagNames = money
+          .tagsForTransaction(transaction.id)
+          .map((item) => item.name)
+          .toList();
+      await repository.deleteTransaction(transaction.id);
       if (context.mounted) Navigator.pop(context);
-      Get.snackbar('Berhasil', 'Transaksi dihapus.');
+      Get.snackbar(
+        'Transaksi dihapus',
+        'Saldo telah diperbarui.',
+        duration: const Duration(seconds: 5),
+        mainButton: TextButton(
+          onPressed: () async {
+            await repository.restoreTransaction(transaction, tags: tagNames);
+            Get.closeCurrentSnackbar();
+            Get.snackbar('Dipulihkan', 'Transaksi dikembalikan.');
+          },
+          child: const Text('UNDO'),
+        ),
+      );
     } catch (_) {
       Get.snackbar('Terjadi kesalahan', 'Transaksi tidak dapat dihapus.');
     }
@@ -68,6 +86,7 @@ class _TransactionDetail extends StatelessWidget {
         ?.account
         .name;
     final category = money.categoryById(transaction.categoryId)?.name;
+    final tags = money.tagsForTransaction(transaction.id);
     final typeLabel = switch (transaction.type) {
       'income' => 'Pemasukan',
       'transfer' => 'Transfer',
@@ -146,12 +165,17 @@ class _TransactionDetail extends StatelessWidget {
                 _DetailRow(
                   label: 'Tanggal',
                   value: DateFormat(
-                    'd MMMM yyyy',
+                    'd MMMM yyyy, HH:mm',
                     'id_ID',
                   ).format(transaction.transactionDate),
                 ),
                 if (transaction.note?.isNotEmpty == true)
                   _DetailRow(label: 'Catatan', value: transaction.note!),
+                if (tags.isNotEmpty)
+                  _DetailRow(
+                    label: 'Tags',
+                    value: tags.map((item) => '#${item.name}').join('  '),
+                  ),
               ],
             ),
           ),
@@ -173,13 +197,26 @@ class _TransactionDetail extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: FilledButton.tonalIcon(
-                  onPressed: () => _delete(context),
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Hapus'),
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await showTransactionForm(
+                      Get.context!,
+                      transaction: transaction,
+                      duplicate: true,
+                    );
+                  },
+                  icon: const Icon(Icons.copy_outlined),
+                  label: const Text('Duplikat'),
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          FilledButton.tonalIcon(
+            onPressed: () => _delete(context),
+            icon: const Icon(Icons.delete_outline),
+            label: const Text('Hapus Transaksi'),
           ),
         ],
       ),

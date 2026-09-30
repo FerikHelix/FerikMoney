@@ -4,23 +4,37 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../app/theme/design_tokens.dart';
+import '../../database/app_database.dart';
+import '../../models/finance_models.dart';
+import '../../repositories/report_repository.dart';
+import '../../services/app_preferences_service.dart';
 import '../../services/privacy_service.dart';
+import '../../utils/icon_mapper.dart';
 import '../../widgets/account_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/ferik_card.dart';
+import '../../widgets/finance_activity_tile.dart';
 import '../../widgets/money_text.dart';
 import '../../widgets/section_header.dart';
-import '../../widgets/transaction_tile.dart';
 import '../accounts/account_detail_view.dart';
 import '../accounts/account_form_sheet.dart';
 import '../accounts/accounts_view.dart';
+import '../budgets/budget_controller.dart';
 import '../main/money_controller.dart';
 import '../settings/settings_view.dart';
 import '../transactions/transaction_detail_sheet.dart';
 import '../transactions/transaction_form_sheet.dart';
 
-class HomeView extends GetView<MoneyController> {
+class HomeView extends StatefulWidget {
   const HomeView({super.key});
+
+  @override
+  State<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<HomeView> {
+  final controller = Get.find<MoneyController>();
+  FinancePeriod _period = FinancePeriod.month;
 
   @override
   Widget build(BuildContext context) {
@@ -40,8 +54,15 @@ class HomeView extends GetView<MoneyController> {
         }
         if (controller.accounts.isEmpty) return const _WelcomeState();
 
-        final summary = controller.summaryFor(DateTime.now());
-        final latest = controller.transactions.take(5).toList();
+        final preferences = Get.find<AppPreferencesService>();
+        final snapshot = Get.find<ReportRepository>().build(
+          transactions: controller.transactions,
+          period: _period,
+          anchor: DateTime.now(),
+          firstWeekday: preferences.firstWeekday.value,
+        );
+        final budget = Get.find<BudgetController>().overallFor(DateTime.now());
+        final latest = controller.activities.take(5).toList();
         final availableWidth = MediaQuery.sizeOf(context).width - 32;
         final accountWidth = math.min(
           196.0,
@@ -93,13 +114,28 @@ class HomeView extends GetView<MoneyController> {
               ),
               sliver: SliverList.list(
                 children: [
+                  SegmentedButton<FinancePeriod>(
+                    showSelectedIcon: false,
+                    segments: [
+                      for (final value in FinancePeriod.values)
+                        ButtonSegment(value: value, label: Text(value.label)),
+                    ],
+                    selected: {_period},
+                    onSelectionChanged: (value) =>
+                        setState(() => _period = value.first),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
                   _TotalMoneyHero(
                     total: controller.totalBalance,
-                    income: summary.income,
-                    expense: summary.expense,
+                    income: snapshot.income,
+                    expense: snapshot.expense,
                     visible: valuesVisible,
                     onToggleVisibility: privacy.toggleMoneyVisibility,
                   ),
+                  if (budget != null) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    _BudgetSummary(progress: budget, visible: valuesVisible),
+                  ],
                   const SizedBox(height: AppSpacing.xl),
                   SectionHeader(
                     title: 'Akun Saya',
@@ -111,11 +147,11 @@ class HomeView extends GetView<MoneyController> {
                     height: 132,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
-                      itemCount: controller.accounts.length,
+                      itemCount: controller.activeAccounts.length,
                       separatorBuilder: (_, _) =>
                           const SizedBox(width: AppSpacing.sm),
                       itemBuilder: (context, index) {
-                        final item = controller.accounts[index];
+                        final item = controller.activeAccounts[index];
                         return AccountCard(
                           width: accountWidth,
                           name: item.account.name,
@@ -130,6 +166,24 @@ class HomeView extends GetView<MoneyController> {
                       },
                     ),
                   ),
+                  const SizedBox(height: AppSpacing.xl),
+                  SectionHeader(
+                    title: 'Tambah Cepat',
+                    actionLabel: 'Form lengkap',
+                    onAction: () => showTransactionForm(context),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  _QuickAdd(
+                    categories: controller.frequentCategories('expense'),
+                    onSelected: (categoryId) => showTransactionForm(
+                      context,
+                      initialCategoryId: categoryId,
+                    ),
+                  ),
+                  if (snapshot.expenseByCategory.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    _SpendingSummary(snapshot: snapshot),
+                  ],
                   const SizedBox(height: AppSpacing.xl),
                   SectionHeader(
                     title: 'Aktivitas Terbaru',
@@ -157,27 +211,17 @@ class HomeView extends GetView<MoneyController> {
                       child: Column(
                         children: [
                           for (var index = 0; index < latest.length; index++)
-                            TransactionTile(
-                              transaction: latest[index],
-                              accountName:
-                                  controller
-                                      .accountById(latest[index].accountId)
-                                      ?.account
-                                      .name ??
-                                  '-',
-                              destinationName: controller
-                                  .accountById(
-                                    latest[index].destinationAccountId,
-                                  )
-                                  ?.account
-                                  .name,
-                              category: controller.categoryById(
-                                latest[index].categoryId,
-                              ),
+                            FinanceActivityTile(
+                              activity: latest[index],
                               visible: valuesVisible,
                               showDivider: index < latest.length - 1,
-                              onTap: () =>
-                                  showTransactionDetail(context, latest[index]),
+                              onTransactionTap:
+                                  latest[index].transaction == null
+                                  ? null
+                                  : () => showTransactionDetail(
+                                      context,
+                                      latest[index].transaction!.transaction,
+                                    ),
                             ),
                         ],
                       ),
@@ -188,6 +232,153 @@ class HomeView extends GetView<MoneyController> {
           ],
         );
       }),
+    );
+  }
+}
+
+class _BudgetSummary extends StatelessWidget {
+  const _BudgetSummary({required this.progress, required this.visible});
+
+  final BudgetProgress progress;
+  final bool visible;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (progress.status) {
+      BudgetStatus.safe => context.ferikColors.income,
+      BudgetStatus.approaching => const Color(0xFFD49A3A),
+      BudgetStatus.over => context.ferikColors.expense,
+    };
+    return FerikCard(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Icon(Icons.pie_chart_outline_rounded, color: color),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  progress.remaining >= 0
+                      ? 'Sisa budget bulan ini'
+                      : 'Budget terlampaui',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                MoneyText(
+                  amount: progress.remaining.abs(),
+                  visible: visible,
+                  tone: progress.remaining >= 0
+                      ? MoneyTone.neutral
+                      : MoneyTone.expense,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 64,
+            child: LinearProgressIndicator(
+              value: progress.ratio.clamp(0.0, 1.0),
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickAdd extends StatelessWidget {
+  const _QuickAdd({required this.categories, required this.onSelected});
+
+  final List<Category> categories;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    if (categories.isEmpty) {
+      return OutlinedButton.icon(
+        onPressed: () => showTransactionForm(context),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Catat Pengeluaran'),
+      );
+    }
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      children: [
+        for (final category in categories)
+          ActionChip(
+            avatar: Icon(iconForName(category.icon), size: 18),
+            label: Text(category.name),
+            onPressed: () => onSelected(category.id),
+          ),
+      ],
+    );
+  }
+}
+
+class _SpendingSummary extends StatelessWidget {
+  const _SpendingSummary({required this.snapshot});
+
+  final ReportSnapshot snapshot;
+
+  @override
+  Widget build(BuildContext context) {
+    final money = Get.find<MoneyController>();
+    final top = snapshot.expenseByCategory.entries.reduce(
+      (a, b) => a.value >= b.value ? a : b,
+    );
+    final category = money.categoryById(top.key);
+    final ratio = snapshot.expense == 0 ? 0.0 : top.value / snapshot.expense;
+    return FerikCard(
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: context.ferikColors.expenseSoft,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Icon(
+              iconForName(category?.icon ?? 'category'),
+              color: context.ferikColors.expense,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Pengeluaran terbesar',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                Text(
+                  category?.name ?? 'Kategori',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '${(ratio * 100).round()}%',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: context.ferikColors.expense,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

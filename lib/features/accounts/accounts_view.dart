@@ -91,7 +91,7 @@ class AccountsView extends GetView<MoneyController> {
             const SizedBox(height: AppSpacing.xl),
             const SectionHeader(title: 'Semua Akun'),
             const SizedBox(height: AppSpacing.xs),
-            ...controller.accounts.map(
+            ...controller.activeAccounts.map(
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                 child: FerikCard(
@@ -160,6 +160,35 @@ class AccountsView extends GetView<MoneyController> {
                 ),
               ),
             ),
+            if (controller.accounts.any((item) => item.account.isArchived)) ...[
+              const SizedBox(height: AppSpacing.lg),
+              const SectionHeader(title: 'Diarsipkan'),
+              const SizedBox(height: AppSpacing.xs),
+              ...controller.accounts
+                  .where((item) => item.account.isArchived)
+                  .map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                      child: FerikCard(
+                        onTap: () => Get.to(
+                          () => AccountDetailView(accountId: item.account.id),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.archive_outlined),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(child: Text(item.account.name)),
+                            MoneyText(
+                              amount: item.balance,
+                              visible: visible,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+            ],
           ],
         );
       }),
@@ -169,6 +198,7 @@ class AccountsView extends GetView<MoneyController> {
   String _typeLabel(String type) => switch (type) {
     'bank' => 'Bank',
     'ewallet' => 'E-wallet',
+    'savings' => 'Tabungan',
     'other' => 'Lainnya',
     _ => 'Tunai',
   };

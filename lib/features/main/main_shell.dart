@@ -3,7 +3,8 @@ import 'package:get/get.dart';
 
 import '../../app/theme/design_tokens.dart';
 import '../home/home_view.dart';
-import '../statistics/statistics_view.dart';
+import '../more/more_view.dart';
+import '../reports/reports_view.dart';
 import '../transactions/history_view.dart';
 import '../transactions/transaction_form_sheet.dart';
 import 'money_controller.dart';
@@ -17,7 +18,12 @@ class MainShell extends GetView<MoneyController> {
       () => Scaffold(
         body: IndexedStack(
           index: controller.navigationIndex.value,
-          children: const [HomeView(), HistoryView(), StatisticsView()],
+          children: const [
+            HomeView(),
+            HistoryView(),
+            ReportsView(),
+            MoreView(),
+          ],
         ),
         bottomNavigationBar: DecoratedBox(
           decoration: BoxDecoration(
@@ -42,12 +48,17 @@ class MainShell extends GetView<MoneyController> {
               NavigationDestination(
                 icon: Icon(Icons.receipt_long_outlined),
                 selectedIcon: Icon(Icons.receipt_long_rounded),
-                label: 'Riwayat',
+                label: 'Transaksi',
               ),
               NavigationDestination(
                 icon: Icon(Icons.donut_large_outlined),
                 selectedIcon: Icon(Icons.donut_large_rounded),
-                label: 'Statistik',
+                label: 'Laporan',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.grid_view_outlined),
+                selectedIcon: Icon(Icons.grid_view_rounded),
+                label: 'Lainnya',
               ),
             ],
           ),
@@ -67,7 +78,7 @@ class MainShell extends GetView<MoneyController> {
           },
           child: const Icon(Icons.add_rounded, size: 28),
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }

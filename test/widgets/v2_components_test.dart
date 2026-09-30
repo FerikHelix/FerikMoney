@@ -124,6 +124,7 @@ void main() {
       type: 'expense',
       icon: 'shopping_bag',
       createdAt: now,
+      isArchived: false,
     );
 
     await tester.pumpWidget(

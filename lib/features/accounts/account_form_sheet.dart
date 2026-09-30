@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 
 import '../../app/theme/design_tokens.dart';
 import '../../database/app_database.dart';
 import '../../repositories/money_repository.dart';
-import '../../utils/money_formatter.dart';
+import '../../services/currency_service.dart';
 
 Future<void> showAccountForm(BuildContext context, {Account? account}) async {
   await showModalBottomSheet<void>(
@@ -30,6 +29,7 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
   late final TextEditingController _balanceController;
   late String _type;
   bool _saving = false;
+  CurrencyService get _currency => Get.find<CurrencyService>();
 
   @override
   void initState() {
@@ -38,9 +38,9 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
     _balanceController = TextEditingController(
       text: widget.account == null
           ? ''
-          : NumberFormat.decimalPattern(
-              'id_ID',
-            ).format(widget.account!.initialBalance),
+          : _currency.formatInputDigits(
+              widget.account!.initialBalance.toString(),
+            ),
     );
     _type = widget.account?.type ?? 'cash';
   }
@@ -55,6 +55,7 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
   String get _icon => switch (_type) {
     'bank' => 'account_balance',
     'ewallet' => 'smartphone',
+    'savings' => 'savings',
     'other' => 'savings',
     _ => 'account_balance_wallet',
   };
@@ -66,7 +67,7 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
         id: widget.account?.id,
         name: _nameController.text,
         type: _type,
-        initialBalance: parseRupiah(_balanceController.text),
+        initialBalance: _currency.parseInput(_balanceController.text),
         icon: _icon,
       );
       if (!mounted) return;
@@ -128,6 +129,7 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
                     value: 'ewallet',
                     child: Text('Dompet digital'),
                   ),
+                  DropdownMenuItem(value: 'savings', child: Text('Tabungan')),
                   DropdownMenuItem(value: 'other', child: Text('Lainnya')),
                 ],
                 onChanged: (value) => setState(() => _type = value ?? _type),
@@ -136,10 +138,10 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
               TextField(
                 controller: _balanceController,
                 keyboardType: TextInputType.number,
-                inputFormatters: [RupiahInputFormatter()],
-                decoration: const InputDecoration(
+                inputFormatters: [CurrencyInputFormatter(_currency)],
+                decoration: InputDecoration(
                   labelText: 'Saldo Awal',
-                  prefixText: 'Rp ',
+                  prefixText: '${_currency.current.symbol} ',
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../app/theme/design_tokens.dart';
+import '../../database/app_database.dart';
 import '../../repositories/money_repository.dart';
 import '../../utils/icon_mapper.dart';
 import '../../widgets/ferik_card.dart';
@@ -11,9 +12,10 @@ import '../main/money_controller.dart';
 class CategoriesView extends GetView<MoneyController> {
   const CategoriesView({super.key});
 
-  Future<void> _add(BuildContext context) async {
-    final name = TextEditingController();
-    var type = 'expense';
+  Future<void> _add(BuildContext context, {Category? category}) async {
+    final name = TextEditingController(text: category?.name ?? '');
+    var type = category?.type ?? 'expense';
+    var icon = category?.icon ?? 'label';
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -31,7 +33,7 @@ class CategoriesView extends GetView<MoneyController> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Tambah Kategori',
+                category == null ? 'Tambah Kategori' : 'Edit Kategori',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 16),
@@ -49,8 +51,9 @@ class CategoriesView extends GetView<MoneyController> {
                   ),
                 ],
                 selected: {type},
-                onSelectionChanged: (value) =>
-                    setState(() => type = value.first),
+                onSelectionChanged: category == null
+                    ? (value) => setState(() => type = value.first)
+                    : null,
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
@@ -59,13 +62,57 @@ class CategoriesView extends GetView<MoneyController> {
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(labelText: 'Nama kategori'),
               ),
+              const SizedBox(height: AppSpacing.sm),
+              DropdownButtonFormField<String>(
+                initialValue: icon,
+                decoration: const InputDecoration(
+                  labelText: 'Icon',
+                  prefixIcon: Icon(Icons.emoji_symbols_outlined),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'label', child: Text('Label')),
+                  DropdownMenuItem(value: 'restaurant', child: Text('Makanan')),
+                  DropdownMenuItem(
+                    value: 'directions_car',
+                    child: Text('Transportasi'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'shopping_bag',
+                    child: Text('Belanja'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'receipt_long',
+                    child: Text('Tagihan'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'health_and_safety',
+                    child: Text('Kesehatan'),
+                  ),
+                  DropdownMenuItem(value: 'school', child: Text('Pendidikan')),
+                  DropdownMenuItem(
+                    value: 'family_restroom',
+                    child: Text('Keluarga'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'payments',
+                    child: Text('Pendapatan'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'trending_up',
+                    child: Text('Investasi'),
+                  ),
+                ],
+                onChanged: (value) => setState(() => icon = value ?? icon),
+              ),
               const SizedBox(height: AppSpacing.md),
               FilledButton(
                 onPressed: () async {
                   try {
                     await Get.find<MoneyRepository>().saveCategory(
+                      id: category?.id,
                       name: name.text,
                       type: type,
+                      icon: icon,
                     );
                     if (context.mounted) Navigator.pop(context, true);
                   } on MoneyValidationException catch (error) {
@@ -85,17 +132,28 @@ class CategoriesView extends GetView<MoneyController> {
       ),
     );
     name.dispose();
-    if (saved == true) Get.snackbar('Berhasil', 'Kategori ditambahkan.');
+    if (saved == true) {
+      Get.snackbar(
+        'Berhasil',
+        category == null ? 'Kategori ditambahkan.' : 'Kategori diperbarui.',
+      );
+    }
   }
 
-  Future<void> _delete(String id) async {
+  Future<void> _archive(Category category) async {
     try {
-      await Get.find<MoneyRepository>().deleteCategory(id);
-      Get.snackbar('Berhasil', 'Kategori dihapus.');
+      await Get.find<MoneyRepository>().archiveCategory(
+        category.id,
+        archived: !category.isArchived,
+      );
+      Get.snackbar(
+        'Berhasil',
+        category.isArchived ? 'Kategori dipulihkan.' : 'Kategori diarsipkan.',
+      );
     } on MoneyValidationException catch (error) {
-      Get.snackbar('Kategori tidak dapat dihapus', error.message);
+      Get.snackbar('Kategori tidak dapat diperbarui', error.message);
     } catch (_) {
-      Get.snackbar('Terjadi kesalahan', 'Kategori tidak dapat dihapus.');
+      Get.snackbar('Terjadi kesalahan', 'Kategori tidak dapat diperbarui.');
     }
   }
 
@@ -110,10 +168,10 @@ class CategoriesView extends GetView<MoneyController> {
       ),
       body: Obx(() {
         final expense = controller.categories
-            .where((item) => item.type == 'expense')
+            .where((item) => item.type == 'expense' && !item.isArchived)
             .toList();
         final income = controller.categories
-            .where((item) => item.type == 'income')
+            .where((item) => item.type == 'income' && !item.isArchived)
             .toList();
         return ListView(
           padding: const EdgeInsets.fromLTRB(
@@ -133,7 +191,8 @@ class CategoriesView extends GetView<MoneyController> {
                     _CategoryTile(
                       name: expense[index].name,
                       icon: iconForName(expense[index].icon),
-                      onDelete: () => _delete(expense[index].id),
+                      onTap: () => _add(context, category: expense[index]),
+                      onArchive: () => _archive(expense[index]),
                     ),
                     if (index < expense.length - 1) const Divider(),
                   ],
@@ -151,13 +210,36 @@ class CategoriesView extends GetView<MoneyController> {
                     _CategoryTile(
                       name: income[index].name,
                       icon: iconForName(income[index].icon),
-                      onDelete: () => _delete(income[index].id),
+                      onTap: () => _add(context, category: income[index]),
+                      onArchive: () => _archive(income[index]),
                     ),
                     if (index < income.length - 1) const Divider(),
                   ],
                 ],
               ),
             ),
+            if (controller.categories.any((item) => item.isArchived)) ...[
+              const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(title: 'Diarsipkan'),
+              const SizedBox(height: AppSpacing.xs),
+              FerikCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    for (final item in controller.categories.where(
+                      (value) => value.isArchived,
+                    ))
+                      _CategoryTile(
+                        name: item.name,
+                        icon: iconForName(item.icon),
+                        onTap: () => _add(context, category: item),
+                        onArchive: () => _archive(item),
+                        archived: true,
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ],
         );
       }),
@@ -169,12 +251,16 @@ class _CategoryTile extends StatelessWidget {
   const _CategoryTile({
     required this.name,
     required this.icon,
-    required this.onDelete,
+    required this.onTap,
+    required this.onArchive,
+    this.archived = false,
   });
 
   final String name;
   final IconData icon;
-  final VoidCallback onDelete;
+  final VoidCallback onTap;
+  final VoidCallback onArchive;
+  final bool archived;
 
   @override
   Widget build(BuildContext context) {
@@ -189,10 +275,13 @@ class _CategoryTile extends StatelessWidget {
         child: Icon(icon, size: 20, color: context.ferikColors.primary),
       ),
       title: Text(name),
+      onTap: onTap,
       trailing: IconButton(
-        tooltip: 'Hapus',
-        onPressed: onDelete,
-        icon: const Icon(Icons.delete_outline),
+        tooltip: archived ? 'Pulihkan' : 'Arsipkan',
+        onPressed: onArchive,
+        icon: Icon(
+          archived ? Icons.unarchive_outlined : Icons.archive_outlined,
+        ),
       ),
     );
   }

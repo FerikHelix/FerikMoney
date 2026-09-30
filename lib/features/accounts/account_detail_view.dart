@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../app/theme/design_tokens.dart';
 import '../../repositories/money_repository.dart';
+import '../../services/app_preferences_service.dart';
 import '../../services/privacy_service.dart';
 import '../../utils/date_utils.dart';
 import '../../utils/icon_mapper.dart';
@@ -20,12 +21,20 @@ class AccountDetailView extends GetView<MoneyController> {
 
   final String accountId;
 
-  Future<void> _delete(BuildContext context, String name) async {
+  Future<void> _archive(
+    BuildContext context,
+    String name, {
+    required bool archived,
+  }) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus akun?'),
-        content: Text('Akun $name akan dihapus.'),
+        title: Text(archived ? 'Pulihkan wallet?' : 'Arsipkan wallet?'),
+        content: Text(
+          archived
+              ? '$name akan kembali tersedia untuk transaksi baru.'
+              : '$name disembunyikan dari transaksi baru, tetapi seluruh histori tetap aman.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -33,20 +42,29 @@ class AccountDetailView extends GetView<MoneyController> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus'),
+            child: Text(archived ? 'Pulihkan' : 'Arsipkan'),
           ),
         ],
       ),
     );
     if (confirmed != true) return;
     try {
-      await Get.find<MoneyRepository>().deleteAccount(accountId);
-      Get.back();
-      Get.snackbar('Berhasil', 'Akun dihapus.');
+      await Get.find<MoneyRepository>().archiveAccount(
+        accountId,
+        archived: !archived,
+      );
+      final preferences = Get.find<AppPreferencesService>();
+      if (!archived && preferences.defaultAccountId.value == accountId) {
+        await preferences.setDefaultAccount(null);
+      }
+      Get.snackbar(
+        'Berhasil',
+        archived ? 'Wallet dipulihkan.' : 'Wallet diarsipkan.',
+      );
     } on MoneyValidationException catch (error) {
-      Get.snackbar('Akun tidak dapat dihapus', error.message);
+      Get.snackbar('Wallet tidak dapat diperbarui', error.message);
     } catch (_) {
-      Get.snackbar('Terjadi kesalahan', 'Akun tidak dapat dihapus.');
+      Get.snackbar('Terjadi kesalahan', 'Wallet tidak dapat diperbarui.');
     }
   }
 
@@ -83,9 +101,19 @@ class AccountDetailView extends GetView<MoneyController> {
             Padding(
               padding: const EdgeInsets.only(right: AppSpacing.xs),
               child: IconButton(
-                tooltip: 'Hapus Akun',
-                onPressed: () => _delete(context, item.account.name),
-                icon: const Icon(Icons.delete_outline),
+                tooltip: item.account.isArchived
+                    ? 'Pulihkan Wallet'
+                    : 'Arsipkan Wallet',
+                onPressed: () => _archive(
+                  context,
+                  item.account.name,
+                  archived: item.account.isArchived,
+                ),
+                icon: Icon(
+                  item.account.isArchived
+                      ? Icons.unarchive_outlined
+                      : Icons.archive_outlined,
+                ),
               ),
             ),
           ],

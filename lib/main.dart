@@ -6,6 +6,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'app/bindings/initial_binding.dart';
 import 'app/theme/app_theme.dart';
 import 'features/main/main_shell.dart';
+import 'services/app_preferences_service.dart';
+import 'services/currency_service.dart';
 import 'services/privacy_service.dart';
 import 'services/theme_service.dart';
 
@@ -17,6 +19,11 @@ Future<void> main() async {
     permanent: true,
   );
   await Get.putAsync(() => PrivacyService().init(), permanent: true);
+  final preferences = await Get.putAsync(
+    () => AppPreferencesService().init(),
+    permanent: true,
+  );
+  Get.put(CurrencyService(preferences), permanent: true);
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,

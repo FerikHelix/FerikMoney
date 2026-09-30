@@ -7,6 +7,7 @@ class BackupAccount {
     required this.icon,
     required this.createdAt,
     required this.updatedAt,
+    this.isArchived = false,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class BackupAccount {
   final String icon;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final bool isArchived;
 
   Map<String, Object> toJson() => {
     'id': id,
@@ -25,6 +27,7 @@ class BackupAccount {
     'icon': icon,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
+    'isArchived': isArchived,
   };
 }
 
@@ -35,6 +38,7 @@ class BackupCategory {
     required this.type,
     required this.icon,
     required this.createdAt,
+    this.isArchived = false,
   });
 
   final String id;
@@ -42,6 +46,7 @@ class BackupCategory {
   final String type;
   final String icon;
   final DateTime createdAt;
+  final bool isArchived;
 
   Map<String, Object> toJson() => {
     'id': id,
@@ -49,6 +54,7 @@ class BackupCategory {
     'type': type,
     'icon': icon,
     'createdAt': createdAt.toIso8601String(),
+    'isArchived': isArchived,
   };
 }
 
@@ -93,26 +99,55 @@ class BackupTransaction {
 
 class BackupData {
   const BackupData({
+    this.version = currentVersion,
     required this.exportedAt,
     required this.accounts,
     required this.categories,
     required this.transactions,
+    this.tags = const [],
+    this.transactionTags = const [],
+    this.budgets = const [],
+    this.recurringRules = const [],
+    this.recurringRuleTags = const [],
+    this.recurringOccurrences = const [],
+    this.savingsGoals = const [],
+    this.savingsGoalTransfers = const [],
+    this.preferences = const {},
   });
 
-  static const int currentVersion = 1;
+  static const int currentVersion = 2;
+  final int version;
   final DateTime exportedAt;
   final List<BackupAccount> accounts;
   final List<BackupCategory> categories;
   final List<BackupTransaction> transactions;
+  final List<Map<String, Object?>> tags;
+  final List<Map<String, Object?>> transactionTags;
+  final List<Map<String, Object?>> budgets;
+  final List<Map<String, Object?>> recurringRules;
+  final List<Map<String, Object?>> recurringRuleTags;
+  final List<Map<String, Object?>> recurringOccurrences;
+  final List<Map<String, Object?>> savingsGoals;
+  final List<Map<String, Object?>> savingsGoalTransfers;
+  final Map<String, Object?> preferences;
 
   Map<String, Object> toJson() => {
-    'version': currentVersion,
+    'version': version,
     'app': 'FerikMoney',
     'exportedAt': exportedAt.toIso8601String(),
     'data': {
       'accounts': accounts.map((item) => item.toJson()).toList(),
       'categories': categories.map((item) => item.toJson()).toList(),
       'transactions': transactions.map((item) => item.toJson()).toList(),
+      'tags': tags,
+      'transactionTags': transactionTags,
+      'budgets': budgets,
+      'recurringRules': recurringRules,
+      'recurringRuleTags': recurringRuleTags,
+      'recurringOccurrences': recurringOccurrences,
+      'savingsGoals': savingsGoals,
+      'savingsGoalTransfers': savingsGoalTransfers,
+      'preferences': preferences,
     },
   };
 }

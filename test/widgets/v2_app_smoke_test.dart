@@ -1,9 +1,19 @@
 import 'package:drift/native.dart';
 import 'package:ferikmoney/app/theme/app_theme.dart';
 import 'package:ferikmoney/database/app_database.dart';
+import 'package:ferikmoney/features/budgets/budget_controller.dart';
 import 'package:ferikmoney/features/main/main_shell.dart';
 import 'package:ferikmoney/features/main/money_controller.dart';
+import 'package:ferikmoney/features/recurring/recurring_controller.dart';
+import 'package:ferikmoney/features/reports/reports_controller.dart';
+import 'package:ferikmoney/features/savings/savings_controller.dart';
+import 'package:ferikmoney/repositories/budget_repository.dart';
 import 'package:ferikmoney/repositories/money_repository.dart';
+import 'package:ferikmoney/repositories/recurring_repository.dart';
+import 'package:ferikmoney/repositories/report_repository.dart';
+import 'package:ferikmoney/repositories/savings_repository.dart';
+import 'package:ferikmoney/services/app_preferences_service.dart';
+import 'package:ferikmoney/services/currency_service.dart';
 import 'package:ferikmoney/services/privacy_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -67,7 +77,20 @@ void main() {
 
     Get.testMode = true;
     await Get.putAsync(() => PrivacyService().init(), permanent: true);
+    final preferences = await Get.putAsync(
+      () => AppPreferencesService().init(),
+      permanent: true,
+    );
+    Get.put(CurrencyService(preferences), permanent: true);
     Get.put(MoneyController(repository), permanent: true);
+    Get.put(BudgetController(BudgetRepository(database)), permanent: true);
+    Get.put(SavingsController(SavingsRepository(database)), permanent: true);
+    Get.put(
+      RecurringController(RecurringRepository(database, repository)),
+      permanent: true,
+    );
+    Get.put(ReportsController(const ReportRepository()), permanent: true);
+    Get.put(const ReportRepository(), permanent: true);
     addTearDown(Get.reset);
 
     await tester.pumpWidget(
@@ -80,15 +103,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Total Uang'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Aktivitas Terbaru'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Aktivitas Terbaru'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.text('Riwayat'));
+    await tester.tap(find.text('Transaksi'));
     await tester.pumpAndSettle();
     expect(find.text('Cari transaksi'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.text('Statistik'));
+    await tester.tap(find.text('Laporan'));
     await tester.pumpAndSettle();
     expect(find.text('Pengeluaran per Kategori'), findsOneWidget);
     expect(find.byKey(const Key('expense-donut-painter')), findsOneWidget);
@@ -96,9 +124,9 @@ void main() {
 
     await tester.tap(find.byTooltip('Catat Transaksi'));
     await tester.pumpAndSettle();
-    expect(find.text('Keluar'), findsOneWidget);
-    expect(find.text('Masuk'), findsOneWidget);
-    expect(find.text('Transfer'), findsOneWidget);
+    expect(find.text('Keluar'), findsWidgets);
+    expect(find.text('Masuk'), findsWidgets);
+    expect(find.text('Transfer'), findsWidgets);
 
     tester.view.viewInsets = const FakeViewPadding(bottom: 280);
     await tester.pumpAndSettle();

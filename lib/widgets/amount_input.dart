@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../app/theme/design_tokens.dart';
+import '../services/currency_service.dart';
 import '../utils/money_formatter.dart';
 
 class AmountInput extends StatefulWidget {
@@ -41,6 +43,10 @@ class _AmountInputState extends State<AmountInput> {
   @override
   Widget build(BuildContext context) {
     final colors = context.ferikColors;
+    final currency = Get.isRegistered<CurrencyService>()
+        ? Get.find<CurrencyService>()
+        : null;
+    final symbol = currency?.current.symbol ?? 'Rp';
     return AnimatedContainer(
       duration: const Duration(milliseconds: 160),
       curve: Curves.easeOut,
@@ -72,7 +78,12 @@ class _AmountInputState extends State<AmountInput> {
             keyboardType: TextInputType.number,
             textInputAction: TextInputAction.next,
             textAlign: TextAlign.center,
-            inputFormatters: [RupiahInputFormatter()],
+            inputFormatters: [
+              if (currency == null)
+                RupiahInputFormatter()
+              else
+                CurrencyInputFormatter(currency),
+            ],
             onChanged: widget.onChanged,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontSize: 32,
@@ -82,13 +93,13 @@ class _AmountInputState extends State<AmountInput> {
             decoration: InputDecoration(
               isDense: true,
               filled: false,
-              hintText: 'Rp 0',
+              hintText: '$symbol 0',
               hintStyle: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontSize: 32,
                 fontWeight: FontWeight.w800,
                 color: colors.secondaryText.withValues(alpha: 0.65),
               ),
-              prefixText: widget.controller.text.isEmpty ? null : 'Rp ',
+              prefixText: widget.controller.text.isEmpty ? null : '$symbol ',
               prefixStyle: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontSize: 32,
                 fontWeight: FontWeight.w800,

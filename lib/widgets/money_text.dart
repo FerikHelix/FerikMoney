@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../app/theme/design_tokens.dart';
+import '../services/currency_service.dart';
 import '../utils/money_formatter.dart';
 
 enum MoneyTone { neutral, income, expense, transfer }
@@ -34,7 +36,12 @@ class MoneyText extends StatelessWidget {
       MoneyTone.transfer => colors.transfer,
       MoneyTone.neutral => style?.color ?? colors.mainText,
     };
-    final value = visible ? _formattedValue() : 'Rp •••••••';
+    final currency = Get.isRegistered<CurrencyService>()
+        ? Get.find<CurrencyService>()
+        : null;
+    final value = visible
+        ? _formattedValue(currency)
+        : '${currency?.current.symbol ?? 'Rp'} •••••••';
     final text = Text(
       value,
       maxLines: 1,
@@ -62,9 +69,9 @@ class MoneyText extends StatelessWidget {
     );
   }
 
-  String _formattedValue() {
+  String _formattedValue(CurrencyService? currency) {
     final absolute = amount.abs();
-    final value = formatRupiah(absolute);
+    final value = currency?.format(absolute) ?? formatRupiah(absolute);
     if (amount < 0) return '−$value';
     if (!showSign) return value;
     return switch (tone) {

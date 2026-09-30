@@ -23,6 +23,9 @@ class MoneyRepository {
   Stream<List<Category>> watchCategories() => database.watchAllCategories();
   Stream<List<MoneyTransaction>> watchTransactions() =>
       database.watchAllTransactions();
+  Stream<List<Tag>> watchTags() => database.watchAllTags();
+  Stream<List<TransactionTag>> watchTransactionTags() =>
+      database.watchAllTransactionTags();
 
   Future<String> saveAccount({
     String? id,
@@ -35,7 +38,7 @@ class MoneyRepository {
     if (cleanName.isEmpty) {
       throw const MoneyValidationException('Nama akun wajib diisi.');
     }
-    if (!const {'cash', 'bank', 'ewallet', 'other'}.contains(type)) {
+    if (!const {'cash', 'bank', 'ewallet', 'savings', 'other'}.contains(type)) {
       throw const MoneyValidationException('Jenis akun tidak valid.');
     }
     if (initialBalance < 0) {
@@ -82,6 +85,31 @@ class MoneyRepository {
     return id;
   }
 
+  Future<void> archiveAccount(String id, {required bool archived}) async {
+    final now = DateTime.now();
+    final changed =
+        await (database.update(
+          database.accounts,
+        )..where((row) => row.id.equals(id))).write(
+          AccountsCompanion(isArchived: Value(archived), updatedAt: Value(now)),
+        );
+    if (changed == 0) {
+      throw const MoneyValidationException('Akun tidak ditemukan.');
+    }
+    if (archived) {
+      await (database.update(database.recurringRules)..where(
+            (row) =>
+                row.accountId.equals(id) | row.destinationAccountId.equals(id),
+          ))
+          .write(
+            RecurringRulesCompanion(
+              isPaused: const Value(true),
+              updatedAt: Value(now),
+            ),
+          );
+    }
+  }
+
   Future<void> deleteAccount(String id) async {
     final reference =
         await (database.select(database.moneyTransactions)
@@ -106,6 +134,7 @@ class MoneyRepository {
   }
 
   Future<String> saveCategory({
+    String? id,
     required String name,
     required String type,
     String icon = 'label',
@@ -117,19 +146,51 @@ class MoneyRepository {
     if (!const {'income', 'expense'}.contains(type)) {
       throw const MoneyValidationException('Jenis kategori tidak valid.');
     }
-    final id = _uuid.v4();
-    await database
-        .into(database.categories)
-        .insert(
-          CategoriesCompanion.insert(
-            id: id,
-            name: cleanName,
-            type: type,
-            icon: icon,
-            createdAt: DateTime.now(),
-          ),
+    if (id == null) {
+      final newId = _uuid.v4();
+      await database
+          .into(database.categories)
+          .insert(
+            CategoriesCompanion.insert(
+              id: newId,
+              name: cleanName,
+              type: type,
+              icon: icon,
+              createdAt: DateTime.now(),
+            ),
+          );
+      return newId;
+    }
+    final changed =
+        await (database.update(
+          database.categories,
+        )..where((row) => row.id.equals(id))).write(
+          CategoriesCompanion(name: Value(cleanName), icon: Value(icon)),
         );
+    if (changed == 0) {
+      throw const MoneyValidationException('Kategori tidak ditemukan.');
+    }
     return id;
+  }
+
+  Future<void> archiveCategory(String id, {required bool archived}) async {
+    final changed =
+        await (database.update(database.categories)
+              ..where((row) => row.id.equals(id)))
+            .write(CategoriesCompanion(isArchived: Value(archived)));
+    if (changed == 0) {
+      throw const MoneyValidationException('Kategori tidak ditemukan.');
+    }
+    if (archived) {
+      await (database.update(
+        database.recurringRules,
+      )..where((row) => row.categoryId.equals(id))).write(
+        RecurringRulesCompanion(
+          isPaused: const Value(true),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+    }
   }
 
   Future<void> deleteCategory(String id) async {
@@ -159,6 +220,7 @@ class MoneyRepository {
     String? destinationAccountId,
     String? categoryId,
     String? note,
+    List<String> tags = const [],
     required DateTime transactionDate,
   }) async {
     if (!const {'income', 'expense', 'transfer'}.contains(type)) {
@@ -173,8 +235,8 @@ class MoneyRepository {
     final account = await (database.select(
       database.accounts,
     )..where((row) => row.id.equals(accountId))).getSingleOrNull();
-    if (account == null) {
-      throw const MoneyValidationException('Akun tidak ditemukan.');
+    if (account == null || account.isArchived) {
+      throw const MoneyValidationException('Akun tidak tersedia.');
     }
     if (type == 'transfer') {
       if (destinationAccountId == null) {
@@ -189,8 +251,8 @@ class MoneyRepository {
       final destination = await (database.select(
         database.accounts,
       )..where((row) => row.id.equals(destinationId))).getSingleOrNull();
-      if (destination == null) {
-        throw const MoneyValidationException('Akun tujuan tidak ditemukan.');
+      if (destination == null || destination.isArchived) {
+        throw const MoneyValidationException('Akun tujuan tidak tersedia.');
       }
       categoryId = null;
     } else {
@@ -201,7 +263,7 @@ class MoneyRepository {
       final category = await (database.select(
         database.categories,
       )..where((row) => row.id.equals(selectedCategoryId))).getSingleOrNull();
-      if (category == null || category.type != type) {
+      if (category == null || category.isArchived || category.type != type) {
         throw const MoneyValidationException(
           'Kategori tidak sesuai transaksi.',
         );
@@ -210,24 +272,30 @@ class MoneyRepository {
     }
     final now = DateTime.now();
     final cleanNote = note?.trim();
+    if (tags.length > 10) {
+      throw const MoneyValidationException('Maksimal 10 tag per transaksi.');
+    }
     if (id == null) {
       final newId = _uuid.v4();
-      await database
-          .into(database.moneyTransactions)
-          .insert(
-            MoneyTransactionsCompanion.insert(
-              id: newId,
-              type: type,
-              amount: amount,
-              accountId: accountId,
-              destinationAccountId: Value(destinationAccountId),
-              categoryId: Value(categoryId),
-              note: Value(cleanNote?.isEmpty == true ? null : cleanNote),
-              transactionDate: transactionDate,
-              createdAt: now,
-              updatedAt: now,
-            ),
-          );
+      await database.transaction(() async {
+        await database
+            .into(database.moneyTransactions)
+            .insert(
+              MoneyTransactionsCompanion.insert(
+                id: newId,
+                type: type,
+                amount: amount,
+                accountId: accountId,
+                destinationAccountId: Value(destinationAccountId),
+                categoryId: Value(categoryId),
+                note: Value(cleanNote?.isEmpty == true ? null : cleanNote),
+                transactionDate: transactionDate,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            );
+        await _syncTags(newId, tags);
+      });
       return newId;
     }
     final existing = await (database.select(
@@ -236,21 +304,92 @@ class MoneyRepository {
     if (existing == null) {
       throw const MoneyValidationException('Transaksi tidak ditemukan.');
     }
-    await (database.update(
-      database.moneyTransactions,
-    )..where((row) => row.id.equals(id))).write(
-      MoneyTransactionsCompanion(
-        type: Value(type),
-        amount: Value(amount),
-        accountId: Value(accountId),
-        destinationAccountId: Value(destinationAccountId),
-        categoryId: Value(categoryId),
-        note: Value(cleanNote?.isEmpty == true ? null : cleanNote),
-        transactionDate: Value(transactionDate),
-        updatedAt: Value(now),
-      ),
-    );
+    await database.transaction(() async {
+      await (database.update(
+        database.moneyTransactions,
+      )..where((row) => row.id.equals(id))).write(
+        MoneyTransactionsCompanion(
+          type: Value(type),
+          amount: Value(amount),
+          accountId: Value(accountId),
+          destinationAccountId: Value(destinationAccountId),
+          categoryId: Value(categoryId),
+          note: Value(cleanNote?.isEmpty == true ? null : cleanNote),
+          transactionDate: Value(transactionDate),
+          updatedAt: Value(now),
+        ),
+      );
+      await _syncTags(id, tags);
+    });
     return id;
+  }
+
+  Future<void> restoreTransaction(
+    MoneyTransaction transaction, {
+    List<String> tags = const [],
+  }) async {
+    await database.transaction(() async {
+      await database
+          .into(database.moneyTransactions)
+          .insert(
+            MoneyTransactionsCompanion.insert(
+              id: transaction.id,
+              type: transaction.type,
+              amount: transaction.amount,
+              accountId: transaction.accountId,
+              destinationAccountId: Value(transaction.destinationAccountId),
+              categoryId: Value(transaction.categoryId),
+              note: Value(transaction.note),
+              transactionDate: transaction.transactionDate,
+              createdAt: transaction.createdAt,
+              updatedAt: transaction.updatedAt,
+            ),
+          );
+      await _syncTags(transaction.id, tags);
+    });
+  }
+
+  Future<void> _syncTags(String transactionId, List<String> names) async {
+    await (database.delete(
+      database.transactionTags,
+    )..where((row) => row.transactionId.equals(transactionId))).go();
+    final cleaned = <String, String>{};
+    for (final raw in names) {
+      final name = raw.trim();
+      if (name.isEmpty) continue;
+      if (name.length > 40) {
+        throw const MoneyValidationException('Nama tag maksimal 40 karakter.');
+      }
+      cleaned.putIfAbsent(name.toLowerCase(), () => name);
+    }
+    for (final entry in cleaned.entries) {
+      final existing =
+          await (database.select(database.tags)
+                ..where((row) => row.normalizedName.equals(entry.key)))
+              .getSingleOrNull();
+      final tagId = existing?.id ?? _uuid.v4();
+      if (existing == null) {
+        await database
+            .into(database.tags)
+            .insert(
+              TagsCompanion.insert(
+                id: tagId,
+                name: entry.value,
+                normalizedName: entry.key,
+                createdAt: DateTime.now(),
+              ),
+            );
+      }
+      await database
+          .into(database.transactionTags)
+          .insert(
+            TransactionTagsCompanion.insert(
+              transactionId: transactionId,
+              tagId: tagId,
+            ),
+            mode: InsertMode.insertOrIgnore,
+          );
+    }
   }
 
   Future<void> deleteTransaction(String id) async {
