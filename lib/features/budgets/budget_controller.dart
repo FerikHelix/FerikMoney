@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../database/app_database.dart';
 import '../../models/finance_models.dart';
 import '../../repositories/budget_repository.dart';
+import '../../utils/balance_adjustment.dart';
 import '../main/money_controller.dart';
 
 class BudgetController extends GetxController {
@@ -27,6 +28,7 @@ class BudgetController extends GetxController {
       var spent = 0;
       for (final transaction in money.transactions) {
         if (transaction.type != 'expense' ||
+            isAdjustmentCategory(transaction.categoryId) ||
             transaction.transactionDate.year != month.year ||
             transaction.transactionDate.month != month.month) {
           continue;

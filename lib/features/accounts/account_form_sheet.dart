@@ -7,6 +7,7 @@ import '../../repositories/money_repository.dart';
 import '../../services/currency_service.dart';
 import '../../utils/icon_mapper.dart';
 import '../../widgets/account_icon_tile.dart';
+import '../main/money_controller.dart';
 
 Future<void> showAccountForm(BuildContext context, {Account? account}) async {
   await showModalBottomSheet<void>(
@@ -33,20 +34,29 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
   late final TextEditingController _balanceController;
   late String _type;
   bool _saving = false;
+  bool _balanceEdited = false;
+  // When editing, the balance field shows the wallet's *current* balance and
+  // any change is recorded in History as a balance adjustment.
+  int _currentBalance = 0;
   CurrencyService get _currency => Get.find<CurrencyService>();
+  bool get _editing => widget.account != null;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.account?.name ?? '');
+    final account = widget.account;
+    _nameController = TextEditingController(text: account?.name ?? '');
+    if (account != null) {
+      _currentBalance =
+          Get.find<MoneyController>().accountById(account.id)?.balance ??
+          account.initialBalance;
+    }
     _balanceController = TextEditingController(
-      text: widget.account == null
+      text: account == null || _currentBalance < 0
           ? ''
-          : _currency.formatInputDigits(
-              widget.account!.initialBalance.toString(),
-            ),
+          : _currency.formatInputDigits(_currentBalance.toString()),
     );
-    _type = widget.account?.type ?? 'cash';
+    _type = account?.type ?? 'cash';
   }
 
   @override
@@ -68,20 +78,45 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      await Get.find<MoneyRepository>().saveAccount(
-        id: widget.account?.id,
-        name: _nameController.text,
-        type: _type,
-        initialBalance: _currency.parseInput(_balanceController.text),
-        icon: _icon,
-      );
+      final repository = Get.find<MoneyRepository>();
+      final account = widget.account;
+      var message = account == null ? 'Akun ditambahkan.' : 'Akun diperbarui.';
+      if (account == null) {
+        await repository.saveAccount(
+          name: _nameController.text,
+          type: _type,
+          initialBalance: _currency.parseInput(_balanceController.text),
+          icon: _icon,
+        );
+      } else {
+        // The opening balance is never edited: a changed balance becomes a
+        // visible "Penyesuaian saldo" transaction instead.
+        await repository.saveAccount(
+          id: account.id,
+          name: _nameController.text,
+          type: _type,
+          initialBalance: account.initialBalance,
+          icon: _icon,
+        );
+        final newBalance = _currency.parseInput(_balanceController.text);
+        if (_balanceEdited && newBalance != _currentBalance) {
+          final delta = await repository.adjustBalance(
+            accountId: account.id,
+            newBalance: newBalance,
+            note:
+                'Saldo diubah dari ${_currency.format(_currentBalance)} '
+                'ke ${_currency.format(newBalance)}',
+          );
+          if (delta != 0) {
+            message =
+                'Saldo ${delta > 0 ? 'bertambah' : 'berkurang'} '
+                '${_currency.format(delta.abs())}, dicatat di riwayat.';
+          }
+        }
+      }
       if (!mounted) return;
       Navigator.pop(context);
-      Get.snackbar(
-        'Berhasil',
-        widget.account == null ? 'Akun ditambahkan.' : 'Akun diperbarui.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      Get.snackbar('Berhasil', message, snackPosition: SnackPosition.BOTTOM);
     } on MoneyValidationException catch (error) {
       Get.snackbar('Tidak dapat menyimpan', error.message);
     } catch (_) {
@@ -146,11 +181,16 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
               ),
               const SizedBox(height: AppSpacing.md),
               TextField(
+                key: const Key('account-balance-input'),
                 controller: _balanceController,
                 keyboardType: TextInputType.number,
                 inputFormatters: [CurrencyInputFormatter(_currency)],
+                onChanged: (_) => _balanceEdited = true,
                 decoration: InputDecoration(
-                  labelText: 'Saldo Awal',
+                  labelText: _editing ? 'Saldo saat ini' : 'Saldo awal',
+                  helperText: _editing
+                      ? 'Selisihnya akan dicatat di riwayat.'
+                      : 'Opsional. Saldo saat mulai memakai FerikMoney.',
                   prefixText: '${_currency.current.symbol} ',
                 ),
               ),

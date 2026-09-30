@@ -6,6 +6,7 @@ import '../../app/theme/design_tokens.dart';
 import '../../database/app_database.dart';
 import '../../repositories/money_repository.dart';
 import '../../services/privacy_service.dart';
+import '../../utils/balance_adjustment.dart';
 import '../../widgets/ferik_card.dart';
 import '../../widgets/money_text.dart';
 import '../main/money_controller.dart';
@@ -180,39 +181,43 @@ class _TransactionDetail extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    await showTransactionForm(
-                      Get.context!,
-                      transaction: transaction,
-                    );
-                  },
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Edit'),
+          // Balance adjustments are created by editing a wallet's balance, so
+          // they can only be removed, not edited or duplicated.
+          if (!isAdjustmentCategory(transaction.categoryId)) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await showTransactionForm(
+                        Get.context!,
+                        transaction: transaction,
+                      );
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit'),
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    await showTransactionForm(
-                      Get.context!,
-                      transaction: transaction,
-                      duplicate: true,
-                    );
-                  },
-                  icon: const Icon(Icons.copy_outlined),
-                  label: const Text('Duplikat'),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await showTransactionForm(
+                        Get.context!,
+                        transaction: transaction,
+                        duplicate: true,
+                      );
+                    },
+                    icon: const Icon(Icons.copy_outlined),
+                    label: const Text('Duplikat'),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
           FilledButton.tonalIcon(
             onPressed: () => _delete(context),
             icon: const Icon(Icons.delete_outline),

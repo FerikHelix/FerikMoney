@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../database/app_database.dart';
+import '../utils/balance_adjustment.dart';
 import '../utils/money_formatter.dart';
 
 class MoneyValidationException implements Exception {
@@ -83,6 +84,71 @@ class MoneyRepository {
       ),
     );
     return id;
+  }
+
+  /// Sets a wallet's current balance to [newBalance] by recording the
+  /// difference as an income/expense "Penyesuaian saldo" transaction, so the
+  /// change is visible in History. Returns the signed difference (0 = no-op).
+  Future<int> adjustBalance({
+    required String accountId,
+    required int newBalance,
+    String? note,
+  }) async {
+    if (newBalance < 0) {
+      throw const MoneyValidationException('Saldo tidak boleh negatif.');
+    }
+    if (newBalance > maxMoneyAmount) {
+      throw const MoneyValidationException('Saldo terlalu besar.');
+    }
+    return database.transaction(() async {
+      final account = await (database.select(
+        database.accounts,
+      )..where((row) => row.id.equals(accountId))).getSingleOrNull();
+      if (account == null) {
+        throw const MoneyValidationException('Akun tidak ditemukan.');
+      }
+      final delta = newBalance - await database.accountBalance(accountId);
+      if (delta == 0) return 0;
+      if (delta.abs() > maxMoneyAmount) {
+        throw const MoneyValidationException('Selisih saldo terlalu besar.');
+      }
+      final income = delta > 0;
+      final categoryId = income
+          ? adjustmentIncomeCategoryId
+          : adjustmentExpenseCategoryId;
+      final now = DateTime.now();
+      await database
+          .into(database.categories)
+          .insert(
+            CategoriesCompanion.insert(
+              id: categoryId,
+              name: adjustmentCategoryName,
+              type: income ? 'income' : 'expense',
+              icon: adjustmentCategoryIcon,
+              createdAt: now,
+            ),
+            mode: InsertMode.insertOrIgnore,
+          );
+      final cleanNote = note?.trim();
+      await database
+          .into(database.moneyTransactions)
+          .insert(
+            MoneyTransactionsCompanion.insert(
+              id: _uuid.v4(),
+              type: income ? 'income' : 'expense',
+              amount: delta.abs(),
+              accountId: accountId,
+              categoryId: Value(categoryId),
+              note: Value(
+                cleanNote == null || cleanNote.isEmpty ? null : cleanNote,
+              ),
+              transactionDate: now,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      return delta;
+    });
   }
 
   Future<void> archiveAccount(String id, {required bool archived}) async {

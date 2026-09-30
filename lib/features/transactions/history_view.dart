@@ -6,6 +6,7 @@ import '../../app/theme/design_tokens.dart';
 import '../../models/finance_models.dart';
 import '../../services/app_preferences_service.dart';
 import '../../services/privacy_service.dart';
+import '../../utils/balance_adjustment.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/ferik_card.dart';
 import '../../widgets/finance_activity_tile.dart';
@@ -122,7 +123,10 @@ class _HistoryViewState extends State<HistoryView> {
       var net = 0;
       for (final activity in entry.value) {
         final transaction = activity.transaction?.transaction;
-        if (transaction == null) continue;
+        if (transaction == null ||
+            isAdjustmentCategory(transaction.categoryId)) {
+          continue;
+        }
         if (transaction.type == 'income') net += transaction.amount;
         if (transaction.type == 'expense') net -= transaction.amount;
       }

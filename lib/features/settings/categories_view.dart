@@ -167,10 +167,10 @@ class CategoriesView extends GetView<MoneyController> {
         child: const Icon(Icons.add_rounded),
       ),
       body: Obx(() {
-        final expense = controller.categories
+        final expense = controller.userCategories
             .where((item) => item.type == 'expense' && !item.isArchived)
             .toList();
-        final income = controller.categories
+        final income = controller.userCategories
             .where((item) => item.type == 'income' && !item.isArchived)
             .toList();
         return ListView(
@@ -218,7 +218,7 @@ class CategoriesView extends GetView<MoneyController> {
                 ],
               ),
             ),
-            if (controller.categories.any((item) => item.isArchived)) ...[
+            if (controller.userCategories.any((item) => item.isArchived)) ...[
               const SizedBox(height: AppSpacing.xl),
               const SectionHeader(title: 'Diarsipkan'),
               const SizedBox(height: AppSpacing.xs),
@@ -226,7 +226,7 @@ class CategoriesView extends GetView<MoneyController> {
                 padding: EdgeInsets.zero,
                 child: Column(
                   children: [
-                    for (final item in controller.categories.where(
+                    for (final item in controller.userCategories.where(
                       (value) => value.isArchived,
                     ))
                       _CategoryTile(

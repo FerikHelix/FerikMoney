@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/backup_data.dart';
+import '../utils/balance_adjustment.dart';
 
 part 'app_database.g.dart';
 
@@ -507,6 +508,8 @@ class AppDatabase extends _$AppDatabase {
         COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS expense
       FROM transactions
       WHERE transaction_date >= ? AND transaction_date < ?
+        AND (category_id IS NULL
+          OR category_id NOT IN ('$adjustmentIncomeCategoryId', '$adjustmentExpenseCategoryId'))
       ''',
       variables: [Variable.withDateTime(start), Variable.withDateTime(end)],
       readsFrom: {moneyTransactions},

@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../database/app_database.dart';
 import '../../models/finance_models.dart';
 import '../../repositories/money_repository.dart';
+import '../../utils/balance_adjustment.dart';
 import '../savings/savings_controller.dart';
 
 class CategoryTotal {
@@ -74,8 +75,13 @@ class MoneyController extends GetxController {
   List<AccountWithBalance> get activeAccounts =>
       accounts.where((item) => !item.account.isArchived).toList();
 
+  /// Categories a user can pick or manage: balance-adjustment categories are
+  /// created by the app and hidden from every list.
+  List<Category> get userCategories =>
+      categories.where((item) => !isAdjustmentCategory(item.id)).toList();
+
   List<Category> get activeCategories =>
-      categories.where((item) => !item.isArchived).toList();
+      userCategories.where((item) => !item.isArchived).toList();
 
   AccountWithBalance? accountById(String? id) {
     if (id == null) return null;
@@ -144,7 +150,8 @@ class MoneyController extends GetxController {
     var expense = 0;
     for (final transaction in transactions) {
       if (transaction.transactionDate.year != month.year ||
-          transaction.transactionDate.month != month.month) {
+          transaction.transactionDate.month != month.month ||
+          isAdjustmentCategory(transaction.categoryId)) {
         continue;
       }
       if (transaction.type == 'income') income += transaction.amount;
@@ -159,7 +166,8 @@ class MoneyController extends GetxController {
       if (transaction.type == 'expense' &&
           transaction.transactionDate.year == month.year &&
           transaction.transactionDate.month == month.month &&
-          transaction.categoryId != null) {
+          transaction.categoryId != null &&
+          !isAdjustmentCategory(transaction.categoryId)) {
         totals.update(
           transaction.categoryId!,
           (value) => value + transaction.amount,

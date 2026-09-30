@@ -1,5 +1,6 @@
 import '../database/app_database.dart';
 import '../models/finance_models.dart';
+import '../utils/balance_adjustment.dart';
 
 class ReportRepository {
   const ReportRepository();
@@ -25,6 +26,7 @@ class ReportRepository {
     final incomeByCategory = <String, int>{};
     final trend = <DateTime, (int, int)>{};
     for (final transaction in transactions) {
+      if (isAdjustmentCategory(transaction.categoryId)) continue;
       final date = transaction.transactionDate;
       final inCurrent =
           !date.isBefore(range.start) && date.isBefore(effectiveEnd);
