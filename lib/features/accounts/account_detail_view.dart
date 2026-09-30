@@ -6,7 +6,7 @@ import '../../repositories/money_repository.dart';
 import '../../services/app_preferences_service.dart';
 import '../../services/privacy_service.dart';
 import '../../utils/date_utils.dart';
-import '../../utils/icon_mapper.dart';
+import '../../widgets/account_icon_tile.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/ferik_card.dart';
 import '../../widgets/money_text.dart';
@@ -131,20 +131,7 @@ class AccountDetailView extends GetView<MoneyController> {
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Row(
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: context.ferikColors.surface.withValues(
-                        alpha: 0.55,
-                      ),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: Icon(
-                      iconForName(item.account.icon),
-                      color: context.ferikColors.primary,
-                    ),
-                  ),
+                  AccountIconTile(type: item.account.type, size: 48),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(

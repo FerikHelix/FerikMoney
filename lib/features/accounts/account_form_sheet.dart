@@ -5,6 +5,8 @@ import '../../app/theme/design_tokens.dart';
 import '../../database/app_database.dart';
 import '../../repositories/money_repository.dart';
 import '../../services/currency_service.dart';
+import '../../utils/icon_mapper.dart';
+import '../../widgets/account_icon_tile.dart';
 
 Future<void> showAccountForm(BuildContext context, {Account? account}) async {
   await showModalBottomSheet<void>(
@@ -25,6 +27,8 @@ class AccountFormSheet extends StatefulWidget {
 }
 
 class _AccountFormSheetState extends State<AccountFormSheet> {
+  static const _types = ['cash', 'bank', 'ewallet', 'savings', 'other'];
+
   late final TextEditingController _nameController;
   late final TextEditingController _balanceController;
   late String _type;
@@ -52,11 +56,12 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
     super.dispose();
   }
 
+  // The stored icon name is kept for data compatibility; the UI draws account
+  // icons from the type (see accountTypeIcon).
   String get _icon => switch (_type) {
     'bank' => 'account_balance',
     'ewallet' => 'smartphone',
     'savings' => 'savings',
-    'other' => 'savings',
     _ => 'account_balance_wallet',
   };
 
@@ -119,22 +124,27 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              DropdownButtonFormField<String>(
-                initialValue: _type,
-                decoration: const InputDecoration(labelText: 'Jenis'),
-                items: const [
-                  DropdownMenuItem(value: 'cash', child: Text('Tunai')),
-                  DropdownMenuItem(value: 'bank', child: Text('Bank')),
-                  DropdownMenuItem(
-                    value: 'ewallet',
-                    child: Text('Dompet digital'),
-                  ),
-                  DropdownMenuItem(value: 'savings', child: Text('Tabungan')),
-                  DropdownMenuItem(value: 'other', child: Text('Lainnya')),
+              Text('Jenis', style: Theme.of(context).textTheme.labelMedium),
+              const SizedBox(height: AppSpacing.xs),
+              Wrap(
+                spacing: AppSpacing.xs,
+                runSpacing: AppSpacing.xs,
+                children: [
+                  for (final type in _types)
+                    ChoiceChip(
+                      key: Key('account-type-$type'),
+                      avatar: Icon(
+                        accountTypeIcon(type),
+                        size: 18,
+                        color: accountTypeColor(context, type),
+                      ),
+                      label: Text(accountTypeLabel(type)),
+                      selected: _type == type,
+                      onSelected: (_) => setState(() => _type = type),
+                    ),
                 ],
-                onChanged: (value) => setState(() => _type = value ?? _type),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                 controller: _balanceController,
                 keyboardType: TextInputType.number,

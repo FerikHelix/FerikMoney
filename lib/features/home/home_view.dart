@@ -155,8 +155,7 @@ class _HomeViewState extends State<HomeView> {
                         return AccountCard(
                           width: accountWidth,
                           name: item.account.name,
-                          type: _accountTypeLabel(item.account.type),
-                          iconName: item.account.icon,
+                          type: item.account.type,
                           balance: item.balance,
                           visible: valuesVisible,
                           onTap: () => Get.to(
@@ -577,10 +576,3 @@ class _HeroMetric extends StatelessWidget {
     );
   }
 }
-
-String _accountTypeLabel(String type) => switch (type) {
-  'bank' => 'Bank',
-  'ewallet' => 'E-wallet',
-  'other' => 'Lainnya',
-  _ => 'Tunai',
-};

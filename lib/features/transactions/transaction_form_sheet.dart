@@ -7,8 +7,11 @@ import '../../database/app_database.dart';
 import '../../repositories/money_repository.dart';
 import '../../services/app_preferences_service.dart';
 import '../../services/currency_service.dart';
+import '../../services/privacy_service.dart';
 import '../../utils/icon_mapper.dart';
+import '../../widgets/account_icon_tile.dart';
 import '../../widgets/amount_input.dart';
+import '../../widgets/money_text.dart';
 import '../../widgets/transaction_type_selector.dart';
 import '../main/money_controller.dart';
 
@@ -120,14 +123,14 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
   final _currency = Get.find<CurrencyService>();
   late final TextEditingController _amountController;
   late final TextEditingController _noteController;
-  late final TextEditingController _tagController;
   late String _type;
   String? _accountId;
   String? _destinationAccountId;
   String? _categoryId;
   late DateTime _date;
+  // Tags no longer have UI, but existing ones are kept when a transaction is
+  // edited so old data is never dropped silently.
   final _tags = <String>[];
-  bool _showMoreDetails = false;
   bool _saving = false;
 
   @override
@@ -146,7 +149,6 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
     _noteController = TextEditingController(
       text: transaction?.note ?? initialValue?.note ?? '',
     );
-    _tagController = TextEditingController();
     if (transaction != null) {
       _tags.addAll(
         _money.tagsForTransaction(transaction.id).map((item) => item.name),
@@ -154,7 +156,6 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
     } else if (initialValue != null) {
       _tags.addAll(initialValue.tags);
     }
-    _showMoreDetails = _noteController.text.isNotEmpty || _tags.isNotEmpty;
     final preferredAccount =
         widget.initialAccountId ??
         _preferences.defaultAccountId.value ??
@@ -210,7 +211,6 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
   void dispose() {
     _amountController.dispose();
     _noteController.dispose();
-    _tagController.dispose();
     super.dispose();
   }
 
@@ -270,18 +270,32 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
                 separatorBuilder: (_, _) => const Divider(),
                 itemBuilder: (context, index) {
                   final choice = choices[index];
+                  final isSelected = choice.value == selected;
                   return ListTile(
+                    minTileHeight: 60,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
-                    leading: Icon(choice.icon),
+                    leading: choice.leading ?? Icon(choice.icon),
                     title: Text(choice.label),
-                    trailing: choice.value == selected
-                        ? Icon(
-                            Icons.check_circle_rounded,
-                            color: context.ferikColors.primary,
-                          )
-                        : null,
+                    subtitle: choice.subtitle == null
+                        ? null
+                        : Text(choice.subtitle!),
+                    trailing: choice.trailing == null && !isSelected
+                        ? null
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ?choice.trailing,
+                              if (isSelected) ...[
+                                const SizedBox(width: AppSpacing.xs),
+                                Icon(
+                                  Icons.check_circle_rounded,
+                                  color: context.ferikColors.primary,
+                                ),
+                              ],
+                            ],
+                          ),
                     onTap: () => Navigator.pop(context, choice.value),
                   );
                 },
@@ -327,13 +341,26 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
   }
 
   Future<void> _pickAccount({required bool destination}) async {
+    final visible = Get.find<PrivacyService>().showMoney.value;
     final choices = _money.activeAccounts
         .where((item) => !destination || item.account.id != _accountId)
         .map(
           (item) => _Choice(
             value: item.account.id,
             label: item.account.name,
-            icon: iconForName(item.account.icon),
+            icon: accountTypeIcon(item.account.type),
+            leading: AccountIconTile(type: item.account.type, size: 44),
+            subtitle: accountTypeLabel(item.account.type),
+            trailing: SizedBox(
+              width: 108,
+              child: MoneyText(
+                amount: item.balance,
+                visible: visible,
+                scaleDown: true,
+                textAlign: TextAlign.end,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
           ),
         )
         .toList();
@@ -372,22 +399,8 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
     });
   }
 
-  Future<void> _pickTime() async {
-    final selected = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_date),
-    );
-    if (selected == null) return;
-    setState(() {
-      _date = DateTime(
-        _date.year,
-        _date.month,
-        _date.day,
-        selected.hour,
-        selected.minute,
-      );
-    });
-  }
+  static bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   void _setDateShortcut(int dayOffset) {
     final target = DateTime.now().subtract(Duration(days: dayOffset));
@@ -400,18 +413,6 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
         _date.minute,
       );
     });
-  }
-
-  void _addTag([String? raw]) {
-    final value = (raw ?? _tagController.text).trim().replaceAll(',', '');
-    if (value.isEmpty ||
-        _tags.any((item) => item.toLowerCase() == value.toLowerCase()) ||
-        _tags.length >= 10) {
-      _tagController.clear();
-      return;
-    }
-    setState(() => _tags.add(value));
-    _tagController.clear();
   }
 
   Future<void> _save() async {
@@ -474,14 +475,12 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
     final category = _money.categoryById(_categoryId);
     final account = _money.accountById(_accountId)?.account;
     final destination = _money.accountById(_destinationAccountId)?.account;
-    final frequentCategories = _type == 'transfer'
-        ? const <Category>[]
-        : _money.frequentCategories(_type);
     final today = DateTime.now();
-    final isToday =
-        _date.year == today.year &&
-        _date.month == today.month &&
-        _date.day == today.day;
+    final isToday = _isSameDay(_date, today);
+    final isYesterday = _isSameDay(
+      _date,
+      today.subtract(const Duration(days: 1)),
+    );
     final buttonPrefix = _type == 'transfer' ? 'Transfer' : 'Simpan';
     final buttonLabel = _amount > 0
         ? '$buttonPrefix ${_currency.format(_amount)}'
@@ -525,28 +524,21 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
                   autofocus: widget.transaction == null || widget.duplicate,
                   onChanged: (_) => setState(() {}),
                 ),
-                if (frequentCategories.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'Sering digunakan',
-                    style: Theme.of(context).textTheme.labelMedium,
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  key: const Key('transaction-note-input'),
+                  controller: _noteController,
+                  textCapitalization: TextCapitalization.sentences,
+                  textInputAction: TextInputAction.done,
+                  maxLines: 1,
+                  decoration: InputDecoration(
+                    labelText: 'Catatan (opsional)',
+                    prefixIcon: const Icon(Icons.notes_rounded),
+                    fillColor: context.isFerikDark
+                        ? context.ferikColors.surfaceVariant
+                        : context.ferikColors.background,
                   ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xs,
-                    children: [
-                      for (final item in frequentCategories)
-                        ChoiceChip(
-                          label: Text(item.name),
-                          avatar: Icon(iconForName(item.icon), size: 17),
-                          selected: _categoryId == item.id,
-                          onSelected: (_) =>
-                              setState(() => _categoryId = item.id),
-                        ),
-                    ],
-                  ),
-                ],
+                ),
                 const SizedBox(height: AppSpacing.md),
                 AnimatedSize(
                   duration: const Duration(milliseconds: 180),
@@ -571,9 +563,10 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
                             ? 'Dari akun'
                             : 'Akun',
                         value: account?.name ?? 'Pilih akun',
-                        icon: account == null
-                            ? Icons.account_balance_wallet_outlined
-                            : iconForName(account.icon),
+                        icon: Icons.account_balance_wallet_outlined,
+                        leading: account == null
+                            ? null
+                            : AccountIconTile(type: account.type, size: 36),
                         onTap: () => _pickAccount(destination: false),
                       ),
                       if (_type == 'transfer') ...[
@@ -581,9 +574,13 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
                         _SelectorRow(
                           label: 'Ke akun',
                           value: destination?.name ?? 'Pilih akun tujuan',
-                          icon: destination == null
-                              ? Icons.account_balance_wallet_outlined
-                              : iconForName(destination.icon),
+                          icon: Icons.account_balance_wallet_outlined,
+                          leading: destination == null
+                              ? null
+                              : AccountIconTile(
+                                  type: destination.type,
+                                  size: 36,
+                                ),
                           onTap: () => _pickAccount(destination: true),
                         ),
                       ],
@@ -591,104 +588,40 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                _SelectorRow(
-                  label: 'Tanggal',
-                  value: isToday
-                      ? 'Hari ini'
-                      : DateFormat('d MMMM yyyy', 'id_ID').format(_date),
-                  icon: Icons.calendar_today_outlined,
-                  onTap: _pickDate,
-                ),
-                const SizedBox(height: AppSpacing.xs),
                 Wrap(
                   spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    ActionChip(
-                      avatar: const Icon(Icons.today_outlined, size: 17),
+                    ChoiceChip(
+                      key: const Key('transaction-date-today'),
+                      avatar: const Icon(Icons.today_outlined, size: 18),
                       label: const Text('Hari ini'),
-                      onPressed: () => _setDateShortcut(0),
+                      selected: isToday,
+                      onSelected: (_) => _setDateShortcut(0),
                     ),
-                    ActionChip(
-                      avatar: const Icon(Icons.history_rounded, size: 17),
+                    ChoiceChip(
+                      key: const Key('transaction-date-yesterday'),
+                      avatar: const Icon(Icons.history_rounded, size: 18),
                       label: const Text('Kemarin'),
-                      onPressed: () => _setDateShortcut(1),
+                      selected: isYesterday,
+                      onSelected: (_) => _setDateShortcut(1),
+                    ),
+                    ChoiceChip(
+                      key: const Key('transaction-date-pick'),
+                      avatar: const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 18,
+                      ),
+                      label: Text(
+                        isToday || isYesterday
+                            ? 'Pilih tanggal'
+                            : DateFormat('d MMM yyyy', 'id_ID').format(_date),
+                      ),
+                      selected: !isToday && !isYesterday,
+                      onSelected: (_) => _pickDate(),
                     ),
                   ],
-                ),
-                Theme(
-                  data: Theme.of(
-                    context,
-                  ).copyWith(dividerColor: Colors.transparent),
-                  child: ExpansionTile(
-                    key: const Key('transaction-more-details'),
-                    tilePadding: EdgeInsets.zero,
-                    childrenPadding: const EdgeInsets.only(
-                      bottom: AppSpacing.xs,
-                    ),
-                    initiallyExpanded: _showMoreDetails,
-                    onExpansionChanged: (value) =>
-                        setState(() => _showMoreDetails = value),
-                    leading: const Icon(Icons.tune_rounded),
-                    title: const Text('Detail lainnya'),
-                    children: [
-                      _SelectorRow(
-                        label: 'Waktu',
-                        value: DateFormat('HH:mm').format(_date),
-                        icon: Icons.schedule_outlined,
-                        onTap: _pickTime,
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      TextField(
-                        controller: _noteController,
-                        textCapitalization: TextCapitalization.sentences,
-                        maxLines: 1,
-                        decoration: InputDecoration(
-                          labelText: 'Catatan (opsional)',
-                          prefixIcon: const Icon(Icons.notes_rounded),
-                          fillColor: context.isFerikDark
-                              ? context.ferikColors.surfaceVariant
-                              : context.ferikColors.background,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      TextField(
-                        controller: _tagController,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: _addTag,
-                        onChanged: (value) {
-                          if (value.endsWith(',')) _addTag(value);
-                        },
-                        decoration: InputDecoration(
-                          labelText: 'Tags (opsional)',
-                          hintText: 'Ketik lalu tekan Enter',
-                          prefixIcon: const Icon(Icons.tag_rounded),
-                          suffixIcon: IconButton(
-                            tooltip: 'Tambah tag',
-                            onPressed: _addTag,
-                            icon: const Icon(Icons.add_rounded),
-                          ),
-                        ),
-                      ),
-                      if (_tags.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Wrap(
-                            spacing: AppSpacing.xs,
-                            runSpacing: AppSpacing.xs,
-                            children: [
-                              for (final tag in _tags)
-                                InputChip(
-                                  label: Text(tag),
-                                  onDeleted: () =>
-                                      setState(() => _tags.remove(tag)),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 FilledButton.icon(
@@ -721,12 +654,16 @@ class _SelectorRow extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.onTap,
+    this.leading,
   });
 
   final String label;
   final String value;
   final IconData icon;
   final VoidCallback onTap;
+
+  /// Replaces the default icon tile, e.g. with an [AccountIconTile].
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -751,17 +688,18 @@ class _SelectorRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: context.isFerikDark
-                      ? colors.surface
-                      : colors.primarySoft,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                ),
-                child: Icon(icon, size: 19, color: colors.primary),
-              ),
+              leading ??
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: context.isFerikDark
+                          ? colors.surface
+                          : colors.primarySoft,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Icon(icon, size: 19, color: colors.primary),
+                  ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
@@ -788,9 +726,19 @@ class _SelectorRow extends StatelessWidget {
 }
 
 class _Choice<T> {
-  const _Choice({required this.value, required this.label, required this.icon});
+  const _Choice({
+    required this.value,
+    required this.label,
+    required this.icon,
+    this.leading,
+    this.subtitle,
+    this.trailing,
+  });
 
   final T value;
   final String label;
   final IconData icon;
+  final Widget? leading;
+  final String? subtitle;
+  final Widget? trailing;
 }

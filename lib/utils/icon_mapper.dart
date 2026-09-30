@@ -19,3 +19,20 @@ IconData iconForName(String name) => switch (name) {
   'savings' => Icons.savings_rounded,
   _ => Icons.more_horiz_rounded,
 };
+
+/// Account icons are keyed by account type so every type looks different.
+IconData accountTypeIcon(String type) => switch (type) {
+  'bank' => Icons.account_balance_rounded,
+  'ewallet' => Icons.smartphone_rounded,
+  'savings' => Icons.savings_rounded,
+  'other' => Icons.wallet_rounded,
+  _ => Icons.payments_rounded,
+};
+
+String accountTypeLabel(String type) => switch (type) {
+  'bank' => 'Bank',
+  'ewallet' => 'E-wallet',
+  'savings' => 'Tabungan',
+  'other' => 'Lainnya',
+  _ => 'Tunai',
+};

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/theme/design_tokens.dart';
 import '../utils/icon_mapper.dart';
+import 'account_icon_tile.dart';
 import 'ferik_card.dart';
 import 'money_text.dart';
 
@@ -10,7 +11,6 @@ class AccountCard extends StatelessWidget {
     super.key,
     required this.name,
     required this.type,
-    required this.iconName,
     required this.balance,
     required this.visible,
     required this.onTap,
@@ -18,8 +18,9 @@ class AccountCard extends StatelessWidget {
   });
 
   final String name;
+
+  /// Raw account type key (`cash`, `bank`, ...), not a display label.
   final String type;
-  final String iconName;
   final int balance;
   final bool visible;
   final VoidCallback onTap;
@@ -27,7 +28,6 @@ class AccountCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.ferikColors;
     return SizedBox(
       width: width,
       height: 132,
@@ -39,25 +39,11 @@ class AccountCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: context.isFerikDark
-                        ? colors.primaryContainer
-                        : colors.primarySoft,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: Icon(
-                    iconForName(iconName),
-                    size: 20,
-                    color: colors.primary,
-                  ),
-                ),
+                AccountIconTile(type: type, size: 38),
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
-                    type,
+                    accountTypeLabel(type),
                     style: Theme.of(context).textTheme.labelMedium,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

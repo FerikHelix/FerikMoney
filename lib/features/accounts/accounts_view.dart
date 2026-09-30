@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../app/theme/design_tokens.dart';
 import '../../services/privacy_service.dart';
 import '../../utils/icon_mapper.dart';
+import '../../widgets/account_icon_tile.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/ferik_card.dart';
 import '../../widgets/money_text.dart';
@@ -103,18 +104,7 @@ class AccountsView extends GetView<MoneyController> {
                     padding: const EdgeInsets.all(AppSpacing.md),
                     child: Row(
                       children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: context.ferikColors.primaryContainer,
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                          ),
-                          child: Icon(
-                            iconForName(item.account.icon),
-                            color: context.ferikColors.primary,
-                          ),
-                        ),
+                        AccountIconTile(type: item.account.type, size: 44),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Column(
@@ -128,7 +118,7 @@ class AccountsView extends GetView<MoneyController> {
                               ),
                               const SizedBox(height: AppSpacing.xxs),
                               Text(
-                                _typeLabel(item.account.type),
+                                accountTypeLabel(item.account.type),
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],
@@ -194,12 +184,4 @@ class AccountsView extends GetView<MoneyController> {
       }),
     );
   }
-
-  String _typeLabel(String type) => switch (type) {
-    'bank' => 'Bank',
-    'ewallet' => 'E-wallet',
-    'savings' => 'Tabungan',
-    'other' => 'Lainnya',
-    _ => 'Tunai',
-  };
 }
