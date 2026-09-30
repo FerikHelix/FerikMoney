@@ -14,6 +14,7 @@ import '../../widgets/ferik_card.dart';
 import '../../widgets/finance_activity_tile.dart';
 import '../../widgets/money_text.dart';
 import '../main/money_controller.dart';
+import '../savings/goal_transfer_sheet.dart';
 import '../savings/savings_controller.dart';
 import 'transaction_detail_sheet.dart';
 import 'transaction_form_sheet.dart';
@@ -730,6 +731,18 @@ class _HistoryViewState extends State<HistoryView> {
                                                   .activities[index]
                                                   .transaction!
                                                   .transaction,
+                                            ),
+                                      onGoalTransferTap:
+                                          group
+                                                  .activities[index]
+                                                  .goalTransfer ==
+                                              null
+                                          ? null
+                                          : () => showGoalTransferDetail(
+                                              context,
+                                              group
+                                                  .activities[index]
+                                                  .goalTransfer!,
                                             ),
                                     ),
                                 ],

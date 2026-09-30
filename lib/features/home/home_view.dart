@@ -6,8 +6,6 @@ import 'package:get/get.dart';
 import '../../app/theme/design_tokens.dart';
 import '../../database/app_database.dart';
 import '../../models/finance_models.dart';
-import '../../repositories/report_repository.dart';
-import '../../services/app_preferences_service.dart';
 import '../../services/privacy_service.dart';
 import '../../utils/icon_mapper.dart';
 import '../../widgets/account_card.dart';
@@ -20,24 +18,19 @@ import '../accounts/account_detail_view.dart';
 import '../accounts/account_form_sheet.dart';
 import '../accounts/accounts_view.dart';
 import '../budgets/budget_controller.dart';
+import '../budgets/budgets_view.dart';
+import '../main/main_tab.dart';
 import '../main/money_controller.dart';
-import '../settings/settings_view.dart';
+import '../savings/goal_transfer_sheet.dart';
 import '../transactions/transaction_detail_sheet.dart';
 import '../transactions/transaction_form_sheet.dart';
 
-class HomeView extends StatefulWidget {
+class HomeView extends StatelessWidget {
   const HomeView({super.key});
 
   @override
-  State<HomeView> createState() => _HomeViewState();
-}
-
-class _HomeViewState extends State<HomeView> {
-  final controller = Get.find<MoneyController>();
-  FinancePeriod _period = FinancePeriod.month;
-
-  @override
   Widget build(BuildContext context) {
+    final controller = Get.find<MoneyController>();
     final privacy = Get.find<PrivacyService>();
     return SafeArea(
       bottom: false,
@@ -54,14 +47,9 @@ class _HomeViewState extends State<HomeView> {
         }
         if (controller.accounts.isEmpty) return const _WelcomeState();
 
-        final preferences = Get.find<AppPreferencesService>();
-        final snapshot = Get.find<ReportRepository>().build(
-          transactions: controller.transactions,
-          period: _period,
-          anchor: DateTime.now(),
-          firstWeekday: preferences.firstWeekday.value,
-        );
-        final budget = Get.find<BudgetController>().overallFor(DateTime.now());
+        final now = DateTime.now();
+        final month = controller.summaryFor(now);
+        final budget = Get.find<BudgetController>().overallFor(now);
         final latest = controller.activities.take(5).toList();
         final availableWidth = MediaQuery.sizeOf(context).width - 32;
         final accountWidth = math.min(
@@ -94,16 +82,6 @@ class _HomeViewState extends State<HomeView> {
                   ),
                 ],
               ),
-              actions: [
-                Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.xs),
-                  child: IconButton.filledTonal(
-                    tooltip: 'Pengaturan',
-                    onPressed: () => Get.to(() => const SettingsView()),
-                    icon: const Icon(Icons.settings_outlined, size: 21),
-                  ),
-                ),
-              ],
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
@@ -114,27 +92,22 @@ class _HomeViewState extends State<HomeView> {
               ),
               sliver: SliverList.list(
                 children: [
-                  SegmentedButton<FinancePeriod>(
-                    showSelectedIcon: false,
-                    segments: [
-                      for (final value in FinancePeriod.values)
-                        ButtonSegment(value: value, label: Text(value.label)),
-                    ],
-                    selected: {_period},
-                    onSelectionChanged: (value) =>
-                        setState(() => _period = value.first),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
                   _TotalMoneyHero(
                     total: controller.totalBalance,
-                    income: snapshot.income,
-                    expense: snapshot.expense,
+                    savings: controller.savingsTotal,
+                    todayExpense: controller.expenseOn(now),
+                    income: month.income,
+                    expense: month.expense,
                     visible: valuesVisible,
                     onToggleVisibility: privacy.toggleMoneyVisibility,
                   ),
                   if (budget != null) ...[
                     const SizedBox(height: AppSpacing.sm),
-                    _BudgetSummary(progress: budget, visible: valuesVisible),
+                    _BudgetSummary(
+                      progress: budget,
+                      visible: valuesVisible,
+                      onTap: () => Get.to(() => const BudgetsView()),
+                    ),
                   ],
                   const SizedBox(height: AppSpacing.xl),
                   SectionHeader(
@@ -166,11 +139,7 @@ class _HomeViewState extends State<HomeView> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
-                  SectionHeader(
-                    title: 'Tambah Cepat',
-                    actionLabel: 'Form lengkap',
-                    onAction: () => showTransactionForm(context),
-                  ),
+                  const SectionHeader(title: 'Tambah Cepat'),
                   const SizedBox(height: AppSpacing.xs),
                   _QuickAdd(
                     categories: controller.frequentCategories('expense'),
@@ -179,15 +148,11 @@ class _HomeViewState extends State<HomeView> {
                       initialCategoryId: categoryId,
                     ),
                   ),
-                  if (snapshot.expenseByCategory.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.lg),
-                    _SpendingSummary(snapshot: snapshot),
-                  ],
                   const SizedBox(height: AppSpacing.xl),
                   SectionHeader(
                     title: 'Aktivitas Terbaru',
                     actionLabel: 'Semua',
-                    onAction: () => controller.navigationIndex.value = 1,
+                    onAction: () => controller.goTo(MainTab.history),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   if (latest.isEmpty)
@@ -221,6 +186,13 @@ class _HomeViewState extends State<HomeView> {
                                       context,
                                       latest[index].transaction!.transaction,
                                     ),
+                              onGoalTransferTap:
+                                  latest[index].goalTransfer == null
+                                  ? null
+                                  : () => showGoalTransferDetail(
+                                      context,
+                                      latest[index].goalTransfer!,
+                                    ),
                             ),
                         ],
                       ),
@@ -236,19 +208,25 @@ class _HomeViewState extends State<HomeView> {
 }
 
 class _BudgetSummary extends StatelessWidget {
-  const _BudgetSummary({required this.progress, required this.visible});
+  const _BudgetSummary({
+    required this.progress,
+    required this.visible,
+    required this.onTap,
+  });
 
   final BudgetProgress progress;
   final bool visible;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = switch (progress.status) {
       BudgetStatus.safe => context.ferikColors.income,
-      BudgetStatus.approaching => const Color(0xFFD49A3A),
+      BudgetStatus.approaching => context.ferikColors.warning,
       BudgetStatus.over => context.ferikColors.expense,
     };
     return FerikCard(
+      onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.sm),
       child: Row(
         children: [
@@ -326,94 +304,21 @@ class _QuickAdd extends StatelessWidget {
   }
 }
 
-class _SpendingSummary extends StatelessWidget {
-  const _SpendingSummary({required this.snapshot});
-
-  final ReportSnapshot snapshot;
-
-  @override
-  Widget build(BuildContext context) {
-    final money = Get.find<MoneyController>();
-    final top = snapshot.expenseByCategory.entries.reduce(
-      (a, b) => a.value >= b.value ? a : b,
-    );
-    final category = money.categoryById(top.key);
-    final ratio = snapshot.expense == 0 ? 0.0 : top.value / snapshot.expense;
-    return FerikCard(
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: context.ferikColors.expenseSoft,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-            ),
-            child: Icon(
-              iconForName(category?.icon ?? 'category'),
-              color: context.ferikColors.expense,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Pengeluaran terbesar',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                Text(
-                  category?.name ?? 'Kategori',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
-            ),
-          ),
-          Text(
-            '${(ratio * 100).round()}%',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: context.ferikColors.expense,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _WelcomeState extends StatelessWidget {
   const _WelcomeState();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'FerikMoney',
-          style: TextStyle(fontWeight: FontWeight.w800),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.xs),
-            child: IconButton.filledTonal(
-              tooltip: 'Pengaturan',
-              onPressed: () => Get.to(() => const SettingsView()),
-              icon: const Icon(Icons.settings_outlined),
-            ),
-          ),
-        ],
-      ),
-      body: EmptyState(
-        icon: Icons.account_balance_wallet_outlined,
-        title: 'Belum ada akun',
-        message:
-            'Tambahkan tempat kamu menyimpan uang untuk mulai mencatat dengan simpel.',
-        action: FilledButton.icon(
-          onPressed: () => showAccountForm(context),
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Tambah Akun'),
-        ),
+    return EmptyState(
+      icon: Icons.account_balance_wallet_outlined,
+      title: 'Selamat datang di FerikMoney',
+      message:
+          'Mulai dengan menambahkan tempat kamu menyimpan uang, misalnya '
+          'dompet tunai atau rekening bank.',
+      action: FilledButton.icon(
+        onPressed: () => showAccountForm(context, suggestedName: 'Tunai'),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Tambah Akun'),
       ),
     );
   }
@@ -422,6 +327,8 @@ class _WelcomeState extends StatelessWidget {
 class _TotalMoneyHero extends StatelessWidget {
   const _TotalMoneyHero({
     required this.total,
+    required this.savings,
+    required this.todayExpense,
     required this.income,
     required this.expense,
     required this.visible,
@@ -429,6 +336,8 @@ class _TotalMoneyHero extends StatelessWidget {
   });
 
   final int total;
+  final int savings;
+  final int todayExpense;
   final int income;
   final int expense;
   final bool visible;
@@ -489,14 +398,64 @@ class _TotalMoneyHero extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
+          if (savings > 0) ...[
+            const SizedBox(height: AppSpacing.xxs),
+            Row(
+              children: [
+                Text(
+                  'Termasuk tabungan ',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                Flexible(
+                  child: MoneyText(
+                    amount: savings,
+                    visible: visible,
+                    scaleDown: true,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: colors.secondaryText,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Icon(Icons.today_outlined, size: 17, color: colors.secondaryText),
+              const SizedBox(width: AppSpacing.xs),
+              if (todayExpense == 0)
+                Text(
+                  'Belum ada pengeluaran hari ini',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                )
+              else ...[
+                Text(
+                  'Hari ini ',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                Flexible(
+                  child: MoneyText(
+                    amount: todayExpense,
+                    visible: visible,
+                    tone: MoneyTone.expense,
+                    showSign: true,
+                    scaleDown: true,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: _HeroMetric(
                   icon: Icons.arrow_upward_rounded,
-                  label: 'Pemasukan',
+                  label: 'Masuk bulan ini',
                   amount: income,
                   tone: MoneyTone.income,
                   visible: visible,
@@ -513,7 +472,7 @@ class _TotalMoneyHero extends StatelessWidget {
               Expanded(
                 child: _HeroMetric(
                   icon: Icons.arrow_downward_rounded,
-                  label: 'Pengeluaran',
+                  label: 'Keluar bulan ini',
                   amount: expense,
                   tone: MoneyTone.expense,
                   visible: visible,

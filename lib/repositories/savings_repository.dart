@@ -127,4 +127,48 @@ class SavingsRepository {
         );
     return id;
   }
+
+  /// Removes a deposit/withdrawal. A deposit cannot be removed if later
+  /// withdrawals would then exceed the money left in the goal.
+  Future<void> deleteTransfer(String id) async {
+    final transfer = await (database.select(
+      database.savingsGoalTransfers,
+    )..where((row) => row.id.equals(id))).getSingleOrNull();
+    if (transfer == null) {
+      throw const MoneyValidationException('Transfer tidak ditemukan.');
+    }
+    if (transfer.type == GoalTransferType.deposit.name) {
+      final progress = await database.watchSavingsGoalsWithProgress().first;
+      final saved = progress
+          .where((item) => item.goal.id == transfer.goalId)
+          .map((item) => item.saved)
+          .firstOrNull;
+      if (saved != null && saved - transfer.amount < 0) {
+        throw const MoneyValidationException(
+          'Setoran ini tidak bisa dihapus karena dananya sudah ditarik.',
+        );
+      }
+    }
+    await (database.delete(
+      database.savingsGoalTransfers,
+    )..where((row) => row.id.equals(id))).go();
+  }
+
+  /// Puts a just-deleted transfer back exactly as it was (used by Undo).
+  Future<void> restoreTransfer(SavingsGoalTransfer transfer) async {
+    await database
+        .into(database.savingsGoalTransfers)
+        .insert(
+          SavingsGoalTransfersCompanion.insert(
+            id: transfer.id,
+            goalId: transfer.goalId,
+            accountId: transfer.accountId,
+            type: transfer.type,
+            amount: transfer.amount,
+            note: Value(transfer.note),
+            transferDate: transfer.transferDate,
+            createdAt: transfer.createdAt,
+          ),
+        );
+  }
 }

@@ -13,7 +13,6 @@ import '../../services/currency_service.dart';
 import '../../services/privacy_service.dart';
 import '../../services/theme_service.dart';
 import '../../widgets/ferik_card.dart';
-import 'categories_view.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -378,13 +377,6 @@ class SettingsView extends StatelessWidget {
             padding: EdgeInsets.zero,
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.category_outlined),
-                  title: const Text('Kelola Kategori'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => Get.to(() => const CategoriesView()),
-                ),
-                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.upload_file_outlined),
                   title: const Text('Backup JSON'),

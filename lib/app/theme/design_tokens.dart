@@ -45,6 +45,7 @@ class FerikColors extends ThemeExtension<FerikColors> {
     required this.expenseSoft,
     required this.transfer,
     required this.transferSoft,
+    required this.warning,
     required this.chartColors,
   });
 
@@ -74,6 +75,7 @@ class FerikColors extends ThemeExtension<FerikColors> {
       expenseSoft = const Color(0xFFFCE8E8),
       transfer = const Color(0xFF3977D5),
       transferSoft = const Color(0xFFE7EFFC),
+      warning = const Color(0xFFD49A3A),
       chartColors = const [
         Color(0xFF087F5B),
         Color(0xFF2AA876),
@@ -109,6 +111,7 @@ class FerikColors extends ThemeExtension<FerikColors> {
       expenseSoft = const Color(0xFF3A2020),
       transfer = const Color(0xFF8DB9FF),
       transferSoft = const Color(0xFF182A42),
+      warning = const Color(0xFFF3B96C),
       chartColors = const [
         Color(0xFF6EE7B7),
         Color(0xFF8DB9FF),
@@ -143,6 +146,9 @@ class FerikColors extends ThemeExtension<FerikColors> {
   final Color expenseSoft;
   final Color transfer;
   final Color transferSoft;
+
+  /// Attention state that is not an error, e.g. a budget close to its limit.
+  final Color warning;
   final List<Color> chartColors;
 
   @override
@@ -172,6 +178,7 @@ class FerikColors extends ThemeExtension<FerikColors> {
     Color? expenseSoft,
     Color? transfer,
     Color? transferSoft,
+    Color? warning,
     List<Color>? chartColors,
   }) => FerikColors(
     background: background ?? this.background,
@@ -200,6 +207,7 @@ class FerikColors extends ThemeExtension<FerikColors> {
     expenseSoft: expenseSoft ?? this.expenseSoft,
     transfer: transfer ?? this.transfer,
     transferSoft: transferSoft ?? this.transferSoft,
+    warning: warning ?? this.warning,
     chartColors: chartColors ?? this.chartColors,
   );
 
@@ -236,6 +244,7 @@ class FerikColors extends ThemeExtension<FerikColors> {
       expenseSoft: mix(expenseSoft, other.expenseSoft),
       transfer: mix(transfer, other.transfer),
       transferSoft: mix(transferSoft, other.transferSoft),
+      warning: mix(warning, other.warning),
       chartColors: List<Color>.generate(
         chartColors.length,
         (index) => mix(

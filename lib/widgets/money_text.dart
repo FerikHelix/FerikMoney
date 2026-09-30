@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../app/theme/design_tokens.dart';
 import '../services/currency_service.dart';
+import '../services/privacy_service.dart';
 import '../utils/money_formatter.dart';
 
 enum MoneyTone { neutral, income, expense, transfer }
@@ -11,7 +12,7 @@ class MoneyText extends StatelessWidget {
   const MoneyText({
     super.key,
     required this.amount,
-    this.visible = true,
+    this.visible,
     this.tone = MoneyTone.neutral,
     this.showSign = false,
     this.style,
@@ -20,7 +21,10 @@ class MoneyText extends StatelessWidget {
   });
 
   final int amount;
-  final bool visible;
+
+  /// Null follows the app-wide "show amounts" setting, so a screen that forgets
+  /// to pass it can never leak hidden numbers.
+  final bool? visible;
   final MoneyTone tone;
   final bool showSign;
   final TextStyle? style;
@@ -29,6 +33,15 @@ class MoneyText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final explicit = visible;
+    if (explicit == null && Get.isRegistered<PrivacyService>()) {
+      final privacy = Get.find<PrivacyService>();
+      return Obx(() => _build(context, privacy.showMoney.value));
+    }
+    return _build(context, explicit ?? true);
+  }
+
+  Widget _build(BuildContext context, bool visible) {
     final colors = context.ferikColors;
     final color = switch (tone) {
       MoneyTone.income => colors.income,

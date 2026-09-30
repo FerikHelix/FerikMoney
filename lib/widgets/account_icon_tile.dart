@@ -10,7 +10,7 @@ Color accountTypeColor(BuildContext context, String type) {
   return switch (type) {
     'bank' => colors.transfer,
     'ewallet' => dark ? const Color(0xFFB9A1FF) : const Color(0xFF8B72BE),
-    'savings' => dark ? const Color(0xFFF3B96C) : const Color(0xFFD49A3A),
+    'savings' => colors.warning,
     'other' => colors.secondaryText,
     _ => colors.income,
   };

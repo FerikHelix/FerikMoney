@@ -7,6 +7,7 @@ import '../../models/finance_models.dart';
 import '../../repositories/money_repository.dart';
 import '../../utils/balance_adjustment.dart';
 import '../savings/savings_controller.dart';
+import 'main_tab.dart';
 
 class CategoryTotal {
   const CategoryTotal({required this.category, required this.amount});
@@ -23,8 +24,10 @@ class MoneyController extends GetxController {
   final transactions = <MoneyTransaction>[].obs;
   final tags = <Tag>[].obs;
   final transactionTags = <TransactionTag>[].obs;
-  final navigationIndex = 0.obs;
+  final navigationIndex = MainTab.home.index.obs;
   final historyRequest = Rxn<HistoryFilterRequest>();
+
+  void goTo(MainTab tab) => navigationIndex.value = tab.index;
   final loading = true.obs;
   final databaseError = RxnString();
 
@@ -62,15 +65,33 @@ class MoneyController extends GetxController {
         'Data lokal tidak dapat dibaca. Coba buka ulang aplikasi.';
   }
 
+  /// Money set aside in savings goals (already deducted from wallet balances).
+  int get savingsTotal => Get.isRegistered<SavingsController>()
+      ? Get.find<SavingsController>().totalSaved
+      : 0;
+
   int get totalBalance {
     final walletTotal = accounts.fold<int>(
       0,
       (total, item) => total + item.balance,
     );
-    final goalTotal = Get.isRegistered<SavingsController>()
-        ? Get.find<SavingsController>().totalSaved
-        : 0;
-    return walletTotal + goalTotal;
+    return walletTotal + savingsTotal;
+  }
+
+  /// Real spending on [day]: expenses only, balance adjustments excluded.
+  int expenseOn(DateTime day) {
+    var total = 0;
+    for (final transaction in transactions) {
+      final date = transaction.transactionDate;
+      if (transaction.type == 'expense' &&
+          !isAdjustmentCategory(transaction.categoryId) &&
+          date.year == day.year &&
+          date.month == day.month &&
+          date.day == day.day) {
+        total += transaction.amount;
+      }
+    }
+    return total;
   }
 
   List<AccountWithBalance> get activeAccounts =>

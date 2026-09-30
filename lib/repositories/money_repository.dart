@@ -191,6 +191,30 @@ class MoneyRepository {
         'Akun tidak dapat dihapus karena masih digunakan oleh transaksi.',
       );
     }
+    final goalTransfer =
+        await (database.select(database.savingsGoalTransfers)
+              ..where((row) => row.accountId.equals(id))
+              ..limit(1))
+            .getSingleOrNull();
+    if (goalTransfer != null) {
+      throw const MoneyValidationException(
+        'Akun tidak dapat dihapus karena masih dipakai transfer tabungan.',
+      );
+    }
+    final rule =
+        await (database.select(database.recurringRules)
+              ..where(
+                (row) =>
+                    row.accountId.equals(id) |
+                    row.destinationAccountId.equals(id),
+              )
+              ..limit(1))
+            .getSingleOrNull();
+    if (rule != null) {
+      throw const MoneyValidationException(
+        'Akun tidak dapat dihapus karena masih dipakai transaksi berulang.',
+      );
+    }
     final deleted = await (database.delete(
       database.accounts,
     )..where((row) => row.id.equals(id))).go();

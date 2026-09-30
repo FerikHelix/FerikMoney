@@ -1,124 +1,19 @@
 import 'dart:async';
 
-import 'package:drift/native.dart';
-import 'package:ferikmoney/app/theme/app_theme.dart';
-import 'package:ferikmoney/database/app_database.dart';
 import 'package:ferikmoney/features/accounts/account_form_sheet.dart';
-import 'package:ferikmoney/features/budgets/budget_controller.dart';
 import 'package:ferikmoney/features/main/main_shell.dart';
 import 'package:ferikmoney/features/main/money_controller.dart';
-import 'package:ferikmoney/features/recurring/recurring_controller.dart';
-import 'package:ferikmoney/features/reports/reports_controller.dart';
-import 'package:ferikmoney/features/savings/savings_controller.dart';
 import 'package:ferikmoney/models/finance_models.dart';
-import 'package:ferikmoney/repositories/budget_repository.dart';
-import 'package:ferikmoney/repositories/money_repository.dart';
-import 'package:ferikmoney/repositories/recurring_repository.dart';
-import 'package:ferikmoney/repositories/report_repository.dart';
-import 'package:ferikmoney/repositories/savings_repository.dart';
-import 'package:ferikmoney/services/app_preferences_service.dart';
-import 'package:ferikmoney/services/currency_service.dart';
-import 'package:ferikmoney/services/privacy_service.dart';
 import 'package:ferikmoney/utils/balance_adjustment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-class _Harness {
-  _Harness(this.database, this.repository, this.bca, this.dana);
-
-  final AppDatabase database;
-  final MoneyRepository repository;
-  final String bca;
-  final String dana;
-}
-
-Future<_Harness> _pumpApp(WidgetTester tester, {Widget? home}) async {
-  tester.view.devicePixelRatio = 1;
-  tester.view.physicalSize = const Size(320, 700);
-  addTearDown(tester.view.reset);
-
-  SharedPreferences.setMockInitialValues({});
-  final database = AppDatabase.forTesting(NativeDatabase.memory());
-  addTearDown(database.close);
-  final repository = MoneyRepository(database);
-  await database.getAllCategories();
-  final bca = await repository.saveAccount(
-    name: 'Bank BCA',
-    type: 'bank',
-    initialBalance: 1000000,
-    icon: 'account_balance',
-  );
-  final dana = await repository.saveAccount(
-    name: 'DANA',
-    type: 'ewallet',
-    initialBalance: 500000,
-    icon: 'smartphone',
-  );
-  final now = DateTime.now();
-  await repository.saveTransaction(
-    type: 'income',
-    amount: 500000,
-    accountId: bca,
-    categoryId: 'income-salary',
-    note: 'Gaji bulanan',
-    transactionDate: now,
-  );
-  await repository.saveTransaction(
-    type: 'expense',
-    amount: 25000,
-    accountId: bca,
-    categoryId: 'expense-food',
-    note: 'Makan siang',
-    transactionDate: now,
-  );
-
-  Get.testMode = true;
-  await Get.putAsync(() => PrivacyService().init(), permanent: true);
-  final preferences = await Get.putAsync(
-    () => AppPreferencesService().init(),
-    permanent: true,
-  );
-  Get.put(CurrencyService(preferences), permanent: true);
-  Get.put(repository, permanent: true);
-  Get.put(MoneyController(repository), permanent: true);
-  Get.put(BudgetController(BudgetRepository(database)), permanent: true);
-  Get.put(SavingsController(SavingsRepository(database)), permanent: true);
-  Get.put(
-    RecurringController(RecurringRepository(database, repository)),
-    permanent: true,
-  );
-  Get.put(ReportsController(const ReportRepository()), permanent: true);
-  Get.put(const ReportRepository(), permanent: true);
-  addTearDown(Get.reset);
-
-  await tester.pumpWidget(
-    GetMaterialApp(
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      home: home ?? const MainShell(),
-    ),
-  );
-  await tester.pumpAndSettle();
-  return _Harness(database, repository, bca, dana);
-}
+import '../support/test_app.dart';
 
 Future<void> _openHistory(WidgetTester tester) async {
   await tester.tap(find.text('Transaksi'));
-  await tester.pumpAndSettle();
-}
-
-/// Lets real (non-fake) async work such as database writes finish, then
-/// settles the UI.
-Future<void> _settle(WidgetTester tester) async {
-  await tester.runAsync(
-    () => Future<void>.delayed(const Duration(milliseconds: 100)),
-  );
-  await tester.pumpAndSettle();
-  // Let the confirmation snackbar time out so no timer outlives the test.
-  await tester.pump(const Duration(seconds: 6));
   await tester.pumpAndSettle();
 }
 
@@ -141,7 +36,7 @@ void main() {
     testWidgets('is simple: note on top, no frequent chips, tags or details', (
       tester,
     ) async {
-      await _pumpApp(tester);
+      await pumpApp(tester);
       await tester.tap(find.byTooltip('Catat Transaksi'));
       await tester.pumpAndSettle();
 
@@ -170,7 +65,7 @@ void main() {
     });
 
     testWidgets('saves an expense with the optional note', (tester) async {
-      final app = await _pumpApp(tester);
+      final app = await pumpApp(tester);
       await tester.tap(find.byTooltip('Catat Transaksi'));
       await tester.pumpAndSettle();
 
@@ -184,7 +79,7 @@ void main() {
       );
       await tester.pump();
       await tester.tap(find.byKey(const Key('transaction-save-button')));
-      await _settle(tester);
+      await settle(tester);
 
       final saved = (await app.database.getAllTransactions()).singleWhere(
         (item) => item.note == 'Kopi pagi',
@@ -194,7 +89,7 @@ void main() {
     });
 
     testWidgets('account picker shows icons, type and balance', (tester) async {
-      await _pumpApp(tester);
+      await pumpApp(tester);
       await tester.tap(find.byTooltip('Catat Transaksi'));
       await tester.pumpAndSettle();
 
@@ -216,7 +111,7 @@ void main() {
     testWidgets('defaults to this month and filters by type in one tap', (
       tester,
     ) async {
-      await _pumpApp(tester);
+      await pumpApp(tester);
       await _openHistory(tester);
 
       final label = find.byKey(const Key('history-period-button'));
@@ -241,7 +136,7 @@ void main() {
     testWidgets('month navigation and all-time recover from an empty month', (
       tester,
     ) async {
-      await _pumpApp(tester);
+      await pumpApp(tester);
       await _openHistory(tester);
 
       // Next month is not reachable from the current one.
@@ -264,7 +159,7 @@ void main() {
     testWidgets('wallet filter uses one-tap chips and shows a removable chip', (
       tester,
     ) async {
-      final app = await _pumpApp(tester);
+      final app = await pumpApp(tester);
       await app.repository.saveTransaction(
         type: 'expense',
         amount: 9000,
@@ -296,7 +191,7 @@ void main() {
     testWidgets('a report drill-down request pre-filters the list', (
       tester,
     ) async {
-      await _pumpApp(tester);
+      await pumpApp(tester);
       await _openHistory(tester);
       final money = Get.find<MoneyController>();
       final now = DateTime.now();
@@ -322,7 +217,7 @@ void main() {
     testWidgets('changing the balance records an adjustment in history', (
       tester,
     ) async {
-      final app = await _pumpApp(tester);
+      final app = await pumpApp(tester);
       final account = (await app.database.getAllAccounts()).singleWhere(
         (item) => item.id == app.bca,
       );
@@ -343,7 +238,7 @@ void main() {
       );
       await tester.pump();
       await tester.tap(find.text('Simpan'));
-      await _settle(tester);
+      await settle(tester);
 
       expect(await app.database.accountBalance(app.bca), 1000000);
       final adjustment = (await app.database.getAllTransactions()).singleWhere(
@@ -362,7 +257,7 @@ void main() {
     testWidgets('renaming without touching the balance adds no adjustment', (
       tester,
     ) async {
-      final app = await _pumpApp(tester);
+      final app = await pumpApp(tester);
       final account = (await app.database.getAllAccounts()).singleWhere(
         (item) => item.id == app.bca,
       );
@@ -373,7 +268,7 @@ void main() {
       await tester.enterText(find.byType(TextField).first, 'BCA Utama');
       await tester.pump();
       await tester.tap(find.text('Simpan'));
-      await _settle(tester);
+      await settle(tester);
 
       expect(
         (await app.database.getAllAccounts()).any(

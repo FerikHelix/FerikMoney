@@ -9,19 +9,27 @@ import '../../utils/icon_mapper.dart';
 import '../../widgets/account_icon_tile.dart';
 import '../main/money_controller.dart';
 
-Future<void> showAccountForm(BuildContext context, {Account? account}) async {
+Future<void> showAccountForm(
+  BuildContext context, {
+  Account? account,
+  String? suggestedName,
+}) async {
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (_) => AccountFormSheet(account: account),
+    builder: (_) =>
+        AccountFormSheet(account: account, suggestedName: suggestedName),
   );
 }
 
 class AccountFormSheet extends StatefulWidget {
-  const AccountFormSheet({super.key, this.account});
+  const AccountFormSheet({super.key, this.account, this.suggestedName});
   final Account? account;
+
+  /// Pre-filled (and selected, so typing replaces it) name for a new account.
+  final String? suggestedName;
 
   @override
   State<AccountFormSheet> createState() => _AccountFormSheetState();
@@ -45,7 +53,12 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
   void initState() {
     super.initState();
     final account = widget.account;
-    _nameController = TextEditingController(text: account?.name ?? '');
+    final initialName = account?.name ?? widget.suggestedName ?? '';
+    _nameController = TextEditingController(text: initialName)
+      ..selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: initialName.length,
+      );
     if (account != null) {
       _currentBalance =
           Get.find<MoneyController>().accountById(account.id)?.balance ??

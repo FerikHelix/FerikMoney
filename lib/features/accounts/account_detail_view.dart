@@ -7,7 +7,9 @@ import '../../services/app_preferences_service.dart';
 import '../../services/privacy_service.dart';
 import '../../utils/date_utils.dart';
 import '../../widgets/account_icon_tile.dart';
+import '../../widgets/confirm_dialog.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/feedback.dart';
 import '../../widgets/ferik_card.dart';
 import '../../widgets/money_text.dart';
 import '../../widgets/section_header.dart';
@@ -21,50 +23,54 @@ class AccountDetailView extends GetView<MoneyController> {
 
   final String accountId;
 
-  Future<void> _archive(
-    BuildContext context,
-    String name, {
-    required bool archived,
-  }) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(archived ? 'Pulihkan wallet?' : 'Arsipkan wallet?'),
-        content: Text(
-          archived
-              ? '$name akan kembali tersedia untuk transaksi baru.'
-              : '$name disembunyikan dari transaksi baru, tetapi seluruh histori tetap aman.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(archived ? 'Pulihkan' : 'Arsipkan'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
+  /// Archiving is reversible, so it happens right away with an Undo.
+  Future<void> _archive(String name, {required bool archived}) async {
+    final repository = Get.find<MoneyRepository>();
     try {
-      await Get.find<MoneyRepository>().archiveAccount(
-        accountId,
-        archived: !archived,
-      );
+      await repository.archiveAccount(accountId, archived: !archived);
       final preferences = Get.find<AppPreferencesService>();
       if (!archived && preferences.defaultAccountId.value == accountId) {
         await preferences.setDefaultAccount(null);
       }
-      Get.snackbar(
-        'Berhasil',
-        archived ? 'Wallet dipulihkan.' : 'Wallet diarsipkan.',
+      showFeedback(
+        archived ? 'Akun dipulihkan' : 'Akun diarsipkan',
+        archived
+            ? '$name kembali tersedia untuk transaksi baru.'
+            : '$name disembunyikan dari transaksi baru. Histori tetap aman.',
+        duration: const Duration(seconds: 5),
+        actionLabel: 'UNDO',
+        onAction: () async {
+          await repository.archiveAccount(accountId, archived: archived);
+          Get.closeCurrentSnackbar();
+        },
       );
     } on MoneyValidationException catch (error) {
-      Get.snackbar('Wallet tidak dapat diperbarui', error.message);
+      showFeedback('Akun tidak dapat diperbarui', error.message);
     } catch (_) {
-      Get.snackbar('Terjadi kesalahan', 'Wallet tidak dapat diperbarui.');
+      showFeedback('Terjadi kesalahan', 'Akun tidak dapat diperbarui.');
+    }
+  }
+
+  /// Only offered for accounts without any transactions.
+  Future<void> _delete(BuildContext context, String name) async {
+    final confirmed = await confirmDestructive(
+      context,
+      title: 'Hapus akun?',
+      message: '$name akan dihapus permanen. Akun ini belum punya transaksi.',
+    );
+    if (!confirmed) return;
+    try {
+      await Get.find<MoneyRepository>().deleteAccount(accountId);
+      final preferences = Get.find<AppPreferencesService>();
+      if (preferences.defaultAccountId.value == accountId) {
+        await preferences.setDefaultAccount(null);
+      }
+      Get.back<void>();
+      showFeedback('Akun dihapus', '$name telah dihapus.');
+    } on MoneyValidationException catch (error) {
+      showFeedback('Akun tidak dapat dihapus', error.message);
+    } catch (_) {
+      showFeedback('Terjadi kesalahan', 'Akun tidak dapat dihapus.');
     }
   }
 
@@ -105,7 +111,6 @@ class AccountDetailView extends GetView<MoneyController> {
                     ? 'Pulihkan Wallet'
                     : 'Arsipkan Wallet',
                 onPressed: () => _archive(
-                  context,
                   item.account.name,
                   archived: item.account.isArchived,
                 ),
@@ -160,15 +165,24 @@ class AccountDetailView extends GetView<MoneyController> {
             const SizedBox(height: AppSpacing.xl),
             const SectionHeader(title: 'Transaksi Akun'),
             const SizedBox(height: AppSpacing.xs),
-            if (related.isEmpty)
+            if (related.isEmpty) ...[
               const FerikCard(
                 child: EmptyState(
                   compact: true,
                   icon: Icons.receipt_long_outlined,
                   title: 'Belum ada transaksi',
                 ),
-              )
-            else
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
+                onPressed: () => _delete(context, item.account.name),
+                icon: const Icon(Icons.delete_outline_rounded),
+                label: const Text('Hapus akun'),
+              ),
+            ] else
               FerikCard(
                 padding: EdgeInsets.zero,
                 child: Column(

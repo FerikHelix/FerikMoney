@@ -12,6 +12,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/expense_donut_chart.dart';
 import '../../widgets/ferik_card.dart';
 import '../../widgets/money_text.dart';
+import '../main/main_tab.dart';
 import '../main/money_controller.dart';
 import 'reports_controller.dart';
 
@@ -62,21 +63,26 @@ class ReportsView extends GetView<ReportsController> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IconButton.filledTonal(
+                  tooltip: 'Periode sebelumnya',
+                  style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
                   onPressed: controller.previous,
                   icon: const Icon(Icons.chevron_left_rounded),
                 ),
                 Expanded(
                   child: Text(
-                    _rangeLabel(
-                      controller.period.value,
-                      controller.anchor.value,
-                    ),
+                    _rangeLabel(controller.period.value, snapshot.range),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
                 IconButton.filledTonal(
-                  onPressed: controller.next,
+                  tooltip: 'Periode berikutnya',
+                  style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+                  // The current period is the latest one worth viewing.
+                  onPressed:
+                      DateTime.now().isBefore(snapshot.range.endExclusive)
+                      ? null
+                      : controller.next,
                   icon: const Icon(Icons.chevron_right_rounded),
                 ),
               ],
@@ -139,8 +145,18 @@ class ReportsView extends GetView<ReportsController> {
                             money.categoryById(expenseEntries[i].key)?.name ??
                             'Kategori',
                         amount: expenseEntries[i].value,
+                        percent: snapshot.expense == 0
+                            ? 0
+                            : (expenseEntries[i].value / snapshot.expense * 100)
+                                  .round(),
                         color: chartColors[i % chartColors.length],
                         visible: visible,
+                        onTap: () => _openCategory(
+                          money,
+                          snapshot,
+                          'expense',
+                          expenseEntries[i].key,
+                        ),
                       ),
                   ],
                 ),
@@ -162,8 +178,18 @@ class ReportsView extends GetView<ReportsController> {
                             money.categoryById(incomeEntries[i].key)?.name ??
                             'Kategori',
                         amount: incomeEntries[i].value,
+                        percent: snapshot.income == 0
+                            ? 0
+                            : (incomeEntries[i].value / snapshot.income * 100)
+                                  .round(),
                         color: context.ferikColors.income,
                         visible: visible,
+                        onTap: () => _openCategory(
+                          money,
+                          snapshot,
+                          'income',
+                          incomeEntries[i].key,
+                        ),
                       ),
                   ],
                 ),
@@ -179,12 +205,34 @@ class ReportsView extends GetView<ReportsController> {
     );
   }
 
-  String _rangeLabel(FinancePeriod period, DateTime anchor) => switch (period) {
-    FinancePeriod.week =>
-      'Minggu ${DateFormat('d MMM', 'id_ID').format(anchor)}',
-    FinancePeriod.month => DateFormat('MMMM yyyy', 'id_ID').format(anchor),
-    FinancePeriod.year => '${anchor.year}',
-  };
+  String _rangeLabel(FinancePeriod period, FinanceDateRange range) {
+    final format = DateFormat('d MMM', 'id_ID');
+    return switch (period) {
+      FinancePeriod.week =>
+        '${format.format(range.start)} – ${format.format(range.endExclusive.subtract(const Duration(days: 1)))}',
+      FinancePeriod.month => DateFormat(
+        'MMMM yyyy',
+        'id_ID',
+      ).format(range.start),
+      FinancePeriod.year => '${range.start.year}',
+    };
+  }
+
+  /// Opens the Transaksi tab filtered to one category in this period, so a
+  /// report number can be traced to the transactions behind it.
+  void _openCategory(
+    MoneyController money,
+    ReportSnapshot snapshot,
+    String type,
+    String categoryId,
+  ) {
+    money.historyRequest.value = HistoryFilterRequest(
+      type: type,
+      categoryId: categoryId,
+      range: snapshot.range,
+    );
+    money.goTo(MainTab.history);
+  }
 }
 
 class _Summary extends StatelessWidget {
@@ -266,39 +314,58 @@ class _CategoryLine extends StatelessWidget {
   const _CategoryLine({
     required this.name,
     required this.amount,
+    required this.percent,
     required this.color,
     required this.visible,
+    required this.onTap,
   });
 
   final String name;
   final int amount;
+  final int percent;
   final Color color;
   final bool visible;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: Row(
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(child: Text(name)),
-          SizedBox(
-            width: 130,
-            child: MoneyText(
-              amount: amount,
-              visible: visible,
-              scaleDown: true,
-              textAlign: TextAlign.end,
-              style: Theme.of(context).textTheme.bodyMedium,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
-          ),
-        ],
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                '$name · $percent%',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            SizedBox(
+              width: 120,
+              child: MoneyText(
+                amount: amount,
+                visible: visible,
+                scaleDown: true,
+                textAlign: TextAlign.end,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: context.ferikColors.secondaryText,
+            ),
+          ],
+        ),
       ),
     );
   }

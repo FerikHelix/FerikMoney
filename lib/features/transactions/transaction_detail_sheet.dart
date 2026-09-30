@@ -7,6 +7,8 @@ import '../../database/app_database.dart';
 import '../../repositories/money_repository.dart';
 import '../../services/privacy_service.dart';
 import '../../utils/balance_adjustment.dart';
+import '../../widgets/detail_row.dart';
+import '../../widgets/feedback.dart';
 import '../../widgets/ferik_card.dart';
 import '../../widgets/money_text.dart';
 import '../main/money_controller.dart';
@@ -30,25 +32,9 @@ class _TransactionDetail extends StatelessWidget {
 
   final MoneyTransaction transaction;
 
+  /// Deletes right away. Undo is the safety net, which is faster than asking
+  /// for confirmation first.
   Future<void> _delete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hapus transaksi?'),
-        content: const Text('Saldo akun akan dihitung ulang secara otomatis.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
     try {
       final money = Get.find<MoneyController>();
       final repository = Get.find<MoneyRepository>();
@@ -58,21 +44,19 @@ class _TransactionDetail extends StatelessWidget {
           .toList();
       await repository.deleteTransaction(transaction.id);
       if (context.mounted) Navigator.pop(context);
-      Get.snackbar(
+      showFeedback(
         'Transaksi dihapus',
         'Saldo telah diperbarui.',
         duration: const Duration(seconds: 5),
-        mainButton: TextButton(
-          onPressed: () async {
-            await repository.restoreTransaction(transaction, tags: tagNames);
-            Get.closeCurrentSnackbar();
-            Get.snackbar('Dipulihkan', 'Transaksi dikembalikan.');
-          },
-          child: const Text('UNDO'),
-        ),
+        actionLabel: 'UNDO',
+        onAction: () async {
+          await repository.restoreTransaction(transaction, tags: tagNames);
+          Get.closeCurrentSnackbar();
+          showFeedback('Dipulihkan', 'Transaksi dikembalikan.');
+        },
       );
     } catch (_) {
-      Get.snackbar('Terjadi kesalahan', 'Transaksi tidak dapat dihapus.');
+      showFeedback('Terjadi kesalahan', 'Transaksi tidak dapat dihapus.');
     }
   }
 
@@ -158,12 +142,12 @@ class _TransactionDetail extends StatelessWidget {
           FerikCard(
             child: Column(
               children: [
-                _DetailRow(label: 'Akun', value: account),
+                DetailRow(label: 'Akun', value: account),
                 if (destination != null)
-                  _DetailRow(label: 'Akun tujuan', value: destination),
+                  DetailRow(label: 'Akun tujuan', value: destination),
                 if (category != null)
-                  _DetailRow(label: 'Kategori', value: category),
-                _DetailRow(
+                  DetailRow(label: 'Kategori', value: category),
+                DetailRow(
                   label: 'Tanggal',
                   value: DateFormat(
                     'd MMMM yyyy, HH:mm',
@@ -171,9 +155,9 @@ class _TransactionDetail extends StatelessWidget {
                   ).format(transaction.transactionDate),
                 ),
                 if (transaction.note?.isNotEmpty == true)
-                  _DetailRow(label: 'Catatan', value: transaction.note!),
+                  DetailRow(label: 'Catatan', value: transaction.note!),
                 if (tags.isNotEmpty)
-                  _DetailRow(
+                  DetailRow(
                     label: 'Tags',
                     value: tags.map((item) => '#${item.name}').join('  '),
                   ),
@@ -222,32 +206,6 @@ class _TransactionDetail extends StatelessWidget {
             onPressed: () => _delete(context),
             icon: const Icon(Icons.delete_outline),
             label: const Text('Hapus Transaksi'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 108,
-            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
-          ),
-          Expanded(
-            child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
           ),
         ],
       ),

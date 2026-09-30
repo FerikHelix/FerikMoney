@@ -15,12 +15,14 @@ class FinanceActivityTile extends StatelessWidget {
     required this.visible,
     this.showDivider = false,
     this.onTransactionTap,
+    this.onGoalTransferTap,
   });
 
   final FinanceActivity activity;
   final bool visible;
   final bool showDivider;
   final VoidCallback? onTransactionTap;
+  final VoidCallback? onGoalTransferTap;
 
   @override
   Widget build(BuildContext context) {
@@ -53,54 +55,62 @@ class FinanceActivityTile extends StatelessWidget {
     final deposit = transfer.type == 'deposit';
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: context.ferikColors.transferSoft,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
+        InkWell(
+          onTap: onGoalTransferTap,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: context.ferikColors.transferSoft,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Icon(
+                    deposit ? Icons.savings_outlined : Icons.wallet_outlined,
+                    color: context.ferikColors.transfer,
+                  ),
                 ),
-                child: Icon(
-                  deposit ? Icons.savings_outlined : Icons.wallet_outlined,
-                  color: context.ferikColors.transfer,
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        deposit ? 'Transfer ke $goal' : 'Penarikan dari $goal',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        account,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      deposit ? 'Transfer ke $goal' : 'Penarikan dari $goal',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(account, style: Theme.of(context).textTheme.bodySmall),
-                  ],
+                const SizedBox(width: AppSpacing.xs),
+                SizedBox(
+                  width:
+                      MediaQuery.sizeOf(context).width.clamp(320, 480) * 0.29,
+                  child: MoneyText(
+                    amount: transfer.amount,
+                    visible: visible,
+                    tone: MoneyTone.transfer,
+                    scaleDown: true,
+                    textAlign: TextAlign.end,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              SizedBox(
-                width: MediaQuery.sizeOf(context).width.clamp(320, 480) * 0.29,
-                child: MoneyText(
-                  amount: transfer.amount,
-                  visible: visible,
-                  tone: MoneyTone.transfer,
-                  scaleDown: true,
-                  textAlign: TextAlign.end,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         if (showDivider)

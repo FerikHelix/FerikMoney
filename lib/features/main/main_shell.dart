@@ -7,6 +7,7 @@ import '../more/more_view.dart';
 import '../reports/reports_view.dart';
 import '../transactions/history_view.dart';
 import '../transactions/transaction_form_sheet.dart';
+import 'main_tab.dart';
 import 'money_controller.dart';
 
 class MainShell extends GetView<MoneyController> {
@@ -38,46 +39,26 @@ class MainShell extends GetView<MoneyController> {
           child: NavigationBar(
             selectedIndex: controller.navigationIndex.value,
             onDestinationSelected: (value) =>
-                controller.navigationIndex.value = value,
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.receipt_long_outlined),
-                selectedIcon: Icon(Icons.receipt_long_rounded),
-                label: 'Transaksi',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.donut_large_outlined),
-                selectedIcon: Icon(Icons.donut_large_rounded),
-                label: 'Laporan',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.grid_view_outlined),
-                selectedIcon: Icon(Icons.grid_view_rounded),
-                label: 'Lainnya',
-              ),
+                controller.goTo(MainTab.values[value]),
+            destinations: [
+              for (final tab in MainTab.values)
+                NavigationDestination(
+                  icon: Icon(tab.icon),
+                  selectedIcon: Icon(tab.selectedIcon),
+                  label: tab.label,
+                ),
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton(
-          tooltip: 'Catat Transaksi',
-          onPressed: () {
-            if (controller.accounts.isEmpty) {
-              Get.snackbar(
-                'Belum ada akun',
-                'Tambahkan akun sebelum mencatat transaksi.',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-              return;
-            }
-            showTransactionForm(context);
-          },
-          child: const Icon(Icons.add_rounded, size: 28),
-        ),
+        // Recording needs a wallet, so the first-run screen offers only
+        // "Tambah dompet" instead of a button that cannot work yet.
+        floatingActionButton: controller.accounts.isEmpty
+            ? null
+            : FloatingActionButton(
+                tooltip: 'Catat Transaksi',
+                onPressed: () => showTransactionForm(context),
+                child: const Icon(Icons.add_rounded, size: 28),
+              ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
