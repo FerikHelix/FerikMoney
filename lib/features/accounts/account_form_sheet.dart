@@ -104,8 +104,8 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
             accountId: account.id,
             newBalance: newBalance,
             note:
-                'Saldo diubah dari ${_currency.format(_currentBalance)} '
-                'ke ${_currency.format(newBalance)}',
+                '${_currency.format(_currentBalance)} → '
+                '${_currency.format(newBalance)}',
           );
           if (delta != 0) {
             message =

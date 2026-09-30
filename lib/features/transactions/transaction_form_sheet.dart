@@ -496,135 +496,162 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
           constraints: BoxConstraints(
             maxHeight: MediaQuery.sizeOf(context).height * 0.91,
           ),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.xxs,
-              AppSpacing.lg,
-              AppSpacing.lg,
-            ),
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  widget.title ??
-                      (widget.duplicate
-                          ? 'Duplikat $_fullTypeLabel'
-                          : widget.transaction == null
-                          ? 'Catat $_fullTypeLabel'
-                          : 'Edit $_fullTypeLabel'),
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TransactionTypeSelector(value: _type, onChanged: _changeType),
-                const SizedBox(height: AppSpacing.md),
-                AmountInput(
-                  controller: _amountController,
-                  autofocus: widget.transaction == null || widget.duplicate,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                TextField(
-                  key: const Key('transaction-note-input'),
-                  controller: _noteController,
-                  textCapitalization: TextCapitalization.sentences,
-                  textInputAction: TextInputAction.done,
-                  maxLines: 1,
-                  decoration: InputDecoration(
-                    labelText: 'Catatan (opsional)',
-                    prefixIcon: const Icon(Icons.notes_rounded),
-                    fillColor: context.isFerikDark
-                        ? context.ferikColors.surfaceVariant
-                        : context.ferikColors.background,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.xxs,
+                    AppSpacing.lg,
+                    0,
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 180),
-                  alignment: Alignment.topCenter,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (_type != 'transfer') ...[
-                        _SelectorRow(
-                          label: 'Kategori',
-                          value: category?.name ?? 'Pilih kategori',
-                          icon: category == null
-                              ? Icons.category_outlined
-                              : iconForName(category.icon),
-                          onTap: _pickCategory,
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                      ],
-                      _SelectorRow(
-                        label: _type == 'income'
-                            ? 'Akun tujuan'
-                            : _type == 'transfer'
-                            ? 'Dari akun'
-                            : 'Akun',
-                        value: account?.name ?? 'Pilih akun',
-                        icon: Icons.account_balance_wallet_outlined,
-                        leading: account == null
-                            ? null
-                            : AccountIconTile(type: account.type, size: 36),
-                        onTap: () => _pickAccount(destination: false),
+                      Text(
+                        widget.title ??
+                            (widget.duplicate
+                                ? 'Duplikat $_fullTypeLabel'
+                                : widget.transaction == null
+                                ? 'Catat $_fullTypeLabel'
+                                : 'Edit $_fullTypeLabel'),
+                        style: Theme.of(context).textTheme.headlineSmall,
                       ),
-                      if (_type == 'transfer') ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        _SelectorRow(
-                          label: 'Ke akun',
-                          value: destination?.name ?? 'Pilih akun tujuan',
-                          icon: Icons.account_balance_wallet_outlined,
-                          leading: destination == null
-                              ? null
-                              : AccountIconTile(
-                                  type: destination.type,
-                                  size: 36,
-                                ),
-                          onTap: () => _pickAccount(destination: true),
+                      const SizedBox(height: AppSpacing.md),
+                      TransactionTypeSelector(
+                        value: _type,
+                        onChanged: _changeType,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      AmountInput(
+                        controller: _amountController,
+                        autofocus:
+                            widget.transaction == null || widget.duplicate,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      TextField(
+                        key: const Key('transaction-note-input'),
+                        controller: _noteController,
+                        textCapitalization: TextCapitalization.sentences,
+                        textInputAction: TextInputAction.done,
+                        maxLines: 1,
+                        decoration: InputDecoration(
+                          labelText: 'Catatan (opsional)',
+                          prefixIcon: const Icon(Icons.notes_rounded),
+                          fillColor: context.isFerikDark
+                              ? context.ferikColors.surfaceVariant
+                              : context.ferikColors.background,
                         ),
-                      ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 180),
+                        alignment: Alignment.topCenter,
+                        child: Column(
+                          children: [
+                            if (_type != 'transfer') ...[
+                              _SelectorRow(
+                                label: 'Kategori',
+                                value: category?.name ?? 'Pilih kategori',
+                                icon: category == null
+                                    ? Icons.category_outlined
+                                    : iconForName(category.icon),
+                                onTap: _pickCategory,
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                            ],
+                            _SelectorRow(
+                              label: _type == 'income'
+                                  ? 'Akun tujuan'
+                                  : _type == 'transfer'
+                                  ? 'Dari akun'
+                                  : 'Akun',
+                              value: account?.name ?? 'Pilih akun',
+                              icon: Icons.account_balance_wallet_outlined,
+                              leading: account == null
+                                  ? null
+                                  : AccountIconTile(
+                                      type: account.type,
+                                      size: 36,
+                                    ),
+                              onTap: () => _pickAccount(destination: false),
+                            ),
+                            if (_type == 'transfer') ...[
+                              const SizedBox(height: AppSpacing.xs),
+                              _SelectorRow(
+                                label: 'Ke akun',
+                                value: destination?.name ?? 'Pilih akun tujuan',
+                                icon: Icons.account_balance_wallet_outlined,
+                                leading: destination == null
+                                    ? null
+                                    : AccountIconTile(
+                                        type: destination.type,
+                                        size: 36,
+                                      ),
+                                onTap: () => _pickAccount(destination: true),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          ChoiceChip(
+                            key: const Key('transaction-date-today'),
+                            avatar: const Icon(Icons.today_outlined, size: 18),
+                            label: const Text('Hari ini'),
+                            selected: isToday,
+                            onSelected: (_) => _setDateShortcut(0),
+                          ),
+                          ChoiceChip(
+                            key: const Key('transaction-date-yesterday'),
+                            avatar: const Icon(Icons.history_rounded, size: 18),
+                            label: const Text('Kemarin'),
+                            selected: isYesterday,
+                            onSelected: (_) => _setDateShortcut(1),
+                          ),
+                          ChoiceChip(
+                            key: const Key('transaction-date-pick'),
+                            avatar: const Icon(
+                              Icons.calendar_today_outlined,
+                              size: 18,
+                            ),
+                            label: Text(
+                              isToday || isYesterday
+                                  ? 'Pilih tanggal'
+                                  : DateFormat(
+                                      'd MMM yyyy',
+                                      'id_ID',
+                                    ).format(_date),
+                            ),
+                            selected: !isToday && !isYesterday,
+                            onSelected: (_) => _pickDate(),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    ChoiceChip(
-                      key: const Key('transaction-date-today'),
-                      avatar: const Icon(Icons.today_outlined, size: 18),
-                      label: const Text('Hari ini'),
-                      selected: isToday,
-                      onSelected: (_) => _setDateShortcut(0),
-                    ),
-                    ChoiceChip(
-                      key: const Key('transaction-date-yesterday'),
-                      avatar: const Icon(Icons.history_rounded, size: 18),
-                      label: const Text('Kemarin'),
-                      selected: isYesterday,
-                      onSelected: (_) => _setDateShortcut(1),
-                    ),
-                    ChoiceChip(
-                      key: const Key('transaction-date-pick'),
-                      avatar: const Icon(
-                        Icons.calendar_today_outlined,
-                        size: 18,
-                      ),
-                      label: Text(
-                        isToday || isYesterday
-                            ? 'Pilih tanggal'
-                            : DateFormat('d MMM yyyy', 'id_ID').format(_date),
-                      ),
-                      selected: !isToday && !isYesterday,
-                      onSelected: (_) => _pickDate(),
-                    ),
-                  ],
+              ),
+              // Pinned so Simpan never scrolls out of reach on small phones.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
                 ),
-                const SizedBox(height: AppSpacing.md),
-                FilledButton.icon(
+                child: FilledButton.icon(
                   key: const Key('transaction-save-button'),
                   onPressed: _canSave ? _save : null,
                   icon: _saving
@@ -639,8 +666,8 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
                         ),
                   label: Text(buttonLabel),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

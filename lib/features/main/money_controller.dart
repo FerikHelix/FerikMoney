@@ -24,6 +24,7 @@ class MoneyController extends GetxController {
   final tags = <Tag>[].obs;
   final transactionTags = <TransactionTag>[].obs;
   final navigationIndex = 0.obs;
+  final historyRequest = Rxn<HistoryFilterRequest>();
   final loading = true.obs;
   final databaseError = RxnString();
 

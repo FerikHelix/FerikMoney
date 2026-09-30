@@ -2,8 +2,6 @@ import '../database/app_database.dart';
 
 enum FinancePeriod { week, month, year }
 
-enum TransactionSort { newest, oldest, highest, lowest }
-
 enum RecurrenceFrequency { daily, weekly, monthly, yearly }
 
 enum OccurrenceStatus { pending, created, skipped }
@@ -97,6 +95,22 @@ class FinanceDateRange {
 
   bool contains(DateTime value) =>
       !value.isBefore(start) && value.isBefore(endExclusive);
+}
+
+/// Asks the History tab to show a pre-filtered list, e.g. when a report
+/// category is tapped. History applies it once and clears it.
+class HistoryFilterRequest {
+  const HistoryFilterRequest({
+    this.type,
+    this.categoryId,
+    this.accountId,
+    required this.range,
+  });
+
+  final String? type;
+  final String? categoryId;
+  final String? accountId;
+  final FinanceDateRange range;
 }
 
 class TransactionWithTags {
