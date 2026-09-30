@@ -796,7 +796,7 @@ class BackupService {
     final defaultAccountId = preferences['defaultAccountId'];
     if (defaultAccountId is String && !accountIds.contains(defaultAccountId)) {
       throw const BackupValidationException(
-        'Default wallet merujuk akun yang tidak ditemukan.',
+        'Akun default merujuk akun yang tidak ditemukan.',
       );
     }
 

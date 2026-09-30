@@ -11,6 +11,7 @@ import '../../services/privacy_service.dart';
 import '../../utils/icon_mapper.dart';
 import '../../widgets/account_icon_tile.dart';
 import '../../widgets/amount_input.dart';
+import '../../widgets/feedback.dart';
 import '../../widgets/money_text.dart';
 import '../../widgets/transaction_type_selector.dart';
 import '../main/money_controller.dart';
@@ -451,19 +452,18 @@ class _TransactionFormSheetState extends State<TransactionFormSheet> {
       );
       if (!mounted) return;
       Navigator.pop(context);
-      Get.snackbar(
+      showFeedback(
         'Tersimpan',
         widget.successMessage ??
             (widget.transaction == null || widget.duplicate
                 ? 'Transaksi berhasil dicatat.'
                 : 'Transaksi berhasil diperbarui.'),
-        snackPosition: SnackPosition.BOTTOM,
         duration: const Duration(seconds: 2),
       );
     } on MoneyValidationException catch (error) {
-      Get.snackbar('Periksa transaksi', error.message);
+      showFeedback('Periksa transaksi', error.message);
     } catch (_) {
-      Get.snackbar('Terjadi kesalahan', 'Transaksi tidak dapat disimpan.');
+      showFeedback('Terjadi kesalahan', 'Transaksi tidak dapat disimpan.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }

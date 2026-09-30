@@ -38,7 +38,7 @@ class _GoalTransferDetail extends StatelessWidget {
       if (context.mounted) Navigator.pop(context);
       showFeedback(
         'Transfer dihapus',
-        'Saldo dompet dan target telah diperbarui.',
+        'Saldo akun dan target telah diperbarui.',
         duration: const Duration(seconds: 5),
         actionLabel: 'UNDO',
         onAction: () async {

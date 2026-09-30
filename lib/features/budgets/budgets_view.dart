@@ -122,7 +122,7 @@ class BudgetsView extends GetView<BudgetController> {
         ),
       ),
     );
-    amountController.dispose();
+    disposeAfterSheet([amountController]);
     if (message != null) showFeedback('Berhasil', message);
   }
 

@@ -14,6 +14,19 @@ Future<T?> showAppSheet<T>(BuildContext context, WidgetBuilder builder) {
   );
 }
 
+/// Disposes [controllers] once a closing sheet has finished animating away.
+///
+/// Disposing right after `await showAppSheet(...)` returns is too early: the
+/// sheet is still on screen for its exit animation, and its text fields would
+/// rebuild with a disposed controller.
+void disposeAfterSheet(List<ChangeNotifier> controllers) {
+  Future<void>.delayed(const Duration(milliseconds: 500), () {
+    for (final controller in controllers) {
+      controller.dispose();
+    }
+  });
+}
+
 /// Standard bottom-sheet layout: a title, scrollable [content], and an
 /// optional [footer] (usually the primary button) that stays pinned so it is
 /// never pushed off screen by the keyboard or a long form.

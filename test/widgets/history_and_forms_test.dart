@@ -171,7 +171,7 @@ void main() {
       await tester.pumpAndSettle();
       await _openHistory(tester);
 
-      await tester.tap(find.byTooltip('Filter dompet dan kategori'));
+      await tester.tap(find.byTooltip('Filter akun dan kategori'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ChoiceChip, 'DANA'));
       await tester.pumpAndSettle();
@@ -180,7 +180,7 @@ void main() {
 
       expect(find.text('Ojek'), findsOneWidget);
       expect(find.text('Makan siang'), findsNothing);
-      expect(find.text('Dompet: DANA'), findsOneWidget);
+      expect(find.text('Akun: DANA'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Delete'));
       await tester.pumpAndSettle();

@@ -314,7 +314,7 @@ class _WelcomeState extends StatelessWidget {
       title: 'Selamat datang di FerikMoney',
       message:
           'Mulai dengan menambahkan tempat kamu menyimpan uang, misalnya '
-          'dompet tunai atau rekening bank.',
+          'akun tunai atau rekening bank.',
       action: FilledButton.icon(
         onPressed: () => showAccountForm(context, suggestedName: 'Tunai'),
         icon: const Icon(Icons.add_rounded),

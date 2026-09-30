@@ -4,13 +4,14 @@ FerikMoney is a private, offline-first personal money manager built with Flutter
 
 ## Features
 
-- Four primary tabs: **Home, Transaksi, Laporan, Lainnya**
-- Wallets for cash, bank, e-wallet, savings, and other account types
-- Income, expenses, and wallet-to-wallet transfers stored as integer minor units
-- Fast transaction form with expense as the default and optional note, time, and tags under **Detail lainnya**
-- Quick Add, frequent categories, remembered wallet/category, date shortcuts, duplicate, edit, delete, and undo
-- Search across notes, categories, wallets, and tags; filters and four sorting modes
-- Archive-safe wallets and categories that preserve historical records
+- Four primary tabs: **Beranda, Transaksi, Laporan, Lainnya**
+- Accounts for cash, bank, e-wallet, savings, and other types, each with its own icon
+- Income, expenses, and account-to-account transfers stored as integer minor units
+- Fast transaction form with expense as the default: amount, an optional note, category, account, and date chips
+- Quick Add on Beranda, remembered account/category, date shortcuts, duplicate, edit, and delete with undo
+- Editing an account's balance records the difference in Riwayat as a **Penyesuaian saldo** entry (excluded from income/expense totals, reports, and budgets)
+- Riwayat opens on the current month with a month navigator, a Semua/Keluar/Masuk/Transfer selector, search, and one-tap account and category filters; report categories open Riwayat already filtered
+- Archive-safe accounts and categories that preserve historical records; empty accounts and budgets can be deleted
 - Optional overall and per-category monthly budgets
 - Daily, weekly, monthly, and yearly recurring rules with idempotent pending occurrences whose amount and transaction details can be adjusted before confirmation
 - Savings goals with deposits and withdrawals that preserve total wealth
@@ -22,7 +23,7 @@ FerikMoney is a private, offline-first personal money manager built with Flutter
 
 ## Product and privacy
 
-The normal flow is: open the app, see all money, tap **+**, enter an amount, choose a category and wallet, then save. There is no login, cloud backend, analytics, advertising, tracking, bank API, or internet dependency. Financial data remains in the local SQLite database unless the user explicitly exports it.
+The normal flow is: open the app, see all money, tap **+**, enter an amount, choose a category and account, then save. There is no login, cloud backend, analytics, advertising, tracking, bank API, or internet dependency. Financial data remains in the local SQLite database unless the user explicitly exports it.
 
 ## Tech stack
 
@@ -55,16 +56,16 @@ lib/
   app/                 dependency bindings and Material themes
   database/            Drift schema, queries, migration, generated code
   features/
-    accounts/          wallet list, detail, create/edit/archive
+    accounts/          account list, detail, create/edit/archive
     budgets/           monthly budgets and progress
-    home/              overview, period selector, quick add, activity
+    home/              overview, today's spending, quick add, activity
     main/              four-tab shell and core controller
     more/              secondary feature navigation
     recurring/         rules and pending occurrence review
     reports/           weekly/monthly/yearly reports
-    savings/           goals and wallet transfers
+    savings/           goals and account transfers
     settings/          preferences, categories, backup, CSV, reset
-    transactions/      add/edit/detail/history/search/filter/sort
+    transactions/      add/edit/detail/history/search/filters
   models/              domain value types and backup DTOs
   repositories/        validated feature persistence
   services/            preferences, currency, privacy, theme, backup

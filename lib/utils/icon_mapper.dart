@@ -17,6 +17,10 @@ IconData iconForName(String name) => switch (name) {
   'label' => Icons.label_rounded,
   'smartphone' => Icons.smartphone_rounded,
   'savings' => Icons.savings_rounded,
+  'school' => Icons.school_rounded,
+  'family_restroom' => Icons.family_restroom_rounded,
+  'person' => Icons.person_rounded,
+  'trending_up' => Icons.trending_up_rounded,
   'tune' => Icons.tune_rounded,
   _ => Icons.more_horiz_rounded,
 };

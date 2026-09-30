@@ -5,174 +5,189 @@ import '../../app/theme/design_tokens.dart';
 import '../../database/app_database.dart';
 import '../../repositories/money_repository.dart';
 import '../../utils/icon_mapper.dart';
+import '../../widgets/app_sheet.dart';
+import '../../widgets/feedback.dart';
 import '../../widgets/ferik_card.dart';
 import '../../widgets/section_header.dart';
 import '../main/money_controller.dart';
 
+/// Icons a user can pick for a category, in display order.
+const _categoryIcons = <String>[
+  'label',
+  'restaurant',
+  'directions_car',
+  'shopping_bag',
+  'receipt_long',
+  'movie',
+  'health_and_safety',
+  'school',
+  'family_restroom',
+  'person',
+  'sports_esports',
+  'payments',
+  'work',
+  'stars',
+  'card_giftcard',
+  'trending_up',
+];
+
 class CategoriesView extends GetView<MoneyController> {
   const CategoriesView({super.key});
 
-  Future<void> _add(BuildContext context, {Category? category}) async {
+  Future<void> _showForm(BuildContext context, {Category? category}) async {
     final name = TextEditingController(text: category?.name ?? '');
     var type = category?.type ?? 'expense';
     var icon = category?.icon ?? 'label';
-    final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.xxs,
-            AppSpacing.lg,
-            AppSpacing.lg + MediaQuery.viewInsetsOf(context).bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                category == null ? 'Tambah Kategori' : 'Edit Kategori',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 16),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(
-                    value: 'expense',
-                    icon: Icon(Icons.arrow_downward_rounded),
-                    label: Text('Keluar'),
-                  ),
-                  ButtonSegment(
-                    value: 'income',
-                    icon: Icon(Icons.arrow_upward_rounded),
-                    label: Text('Masuk'),
-                  ),
-                ],
-                selected: {type},
-                onSelectionChanged: category == null
-                    ? (value) => setState(() => type = value.first)
-                    : null,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              TextField(
-                controller: name,
-                autofocus: true,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Nama kategori'),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              DropdownButtonFormField<String>(
-                initialValue: icon,
-                decoration: const InputDecoration(
-                  labelText: 'Icon',
-                  prefixIcon: Icon(Icons.emoji_symbols_outlined),
+    final message = await showAppSheet<String>(
+      context,
+      (sheetContext) => StatefulBuilder(
+        builder: (context, setState) => AppSheet(
+          title: category == null ? 'Tambah Kategori' : 'Edit Kategori',
+          content: [
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                  value: 'expense',
+                  icon: Icon(Icons.arrow_downward_rounded),
+                  label: Text('Keluar'),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'label', child: Text('Label')),
-                  DropdownMenuItem(value: 'restaurant', child: Text('Makanan')),
-                  DropdownMenuItem(
-                    value: 'directions_car',
-                    child: Text('Transportasi'),
+                ButtonSegment(
+                  value: 'income',
+                  icon: Icon(Icons.arrow_upward_rounded),
+                  label: Text('Masuk'),
+                ),
+              ],
+              selected: {type},
+              onSelectionChanged: category == null
+                  ? (value) => setState(() => type = value.first)
+                  : null,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextField(
+              controller: name,
+              autofocus: category == null,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: 'Nama kategori'),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text('Ikon', style: Theme.of(context).textTheme.labelMedium),
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: [
+                for (final option in _categoryIcons)
+                  _IconChoice(
+                    icon: iconForName(option),
+                    selected: icon == option,
+                    onTap: () => setState(() => icon = option),
                   ),
-                  DropdownMenuItem(
-                    value: 'shopping_bag',
-                    child: Text('Belanja'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'receipt_long',
-                    child: Text('Tagihan'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'health_and_safety',
-                    child: Text('Kesehatan'),
-                  ),
-                  DropdownMenuItem(value: 'school', child: Text('Pendidikan')),
-                  DropdownMenuItem(
-                    value: 'family_restroom',
-                    child: Text('Keluarga'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'payments',
-                    child: Text('Pendapatan'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'trending_up',
-                    child: Text('Investasi'),
-                  ),
-                ],
-                onChanged: (value) => setState(() => icon = value ?? icon),
-              ),
+              ],
+            ),
+            if (category != null) ...[
               const SizedBox(height: AppSpacing.md),
-              FilledButton(
+              TextButton.icon(
                 onPressed: () async {
-                  try {
-                    await Get.find<MoneyRepository>().saveCategory(
-                      id: category?.id,
-                      name: name.text,
-                      type: type,
-                      icon: icon,
-                    );
-                    if (context.mounted) Navigator.pop(context, true);
-                  } on MoneyValidationException catch (error) {
-                    Get.snackbar('Periksa kategori', error.message);
-                  } catch (_) {
-                    Get.snackbar(
-                      'Terjadi kesalahan',
-                      'Kategori tidak dapat disimpan.',
-                    );
+                  final archived = await _toggleArchive(category);
+                  if (archived && sheetContext.mounted) {
+                    Navigator.pop(sheetContext);
                   }
                 },
-                child: const Text('Simpan'),
+                icon: Icon(
+                  category.isArchived
+                      ? Icons.unarchive_outlined
+                      : Icons.archive_outlined,
+                ),
+                label: Text(
+                  category.isArchived
+                      ? 'Pulihkan kategori'
+                      : 'Arsipkan kategori',
+                ),
               ),
             ],
+          ],
+          footer: AsyncFilledButton(
+            label: 'Simpan',
+            icon: Icons.check_rounded,
+            onPressed: () async {
+              try {
+                await Get.find<MoneyRepository>().saveCategory(
+                  id: category?.id,
+                  name: name.text,
+                  type: type,
+                  icon: icon,
+                );
+                if (sheetContext.mounted) {
+                  Navigator.pop(
+                    sheetContext,
+                    category == null
+                        ? 'Kategori ditambahkan.'
+                        : 'Kategori diperbarui.',
+                  );
+                }
+              } on MoneyValidationException catch (error) {
+                showFeedback('Periksa kategori', error.message);
+              } catch (_) {
+                showFeedback(
+                  'Terjadi kesalahan',
+                  'Kategori tidak dapat disimpan.',
+                );
+              }
+            },
           ),
         ),
       ),
     );
-    name.dispose();
-    if (saved == true) {
-      Get.snackbar(
-        'Berhasil',
-        category == null ? 'Kategori ditambahkan.' : 'Kategori diperbarui.',
-      );
-    }
+    disposeAfterSheet([name]);
+    if (message != null) showFeedback('Berhasil', message);
   }
 
-  Future<void> _archive(Category category) async {
+  /// Archives (or restores) a category right away, with Undo. Returns true
+  /// when the change was applied.
+  Future<bool> _toggleArchive(Category category) async {
+    final repository = Get.find<MoneyRepository>();
+    final archive = !category.isArchived;
     try {
-      await Get.find<MoneyRepository>().archiveCategory(
-        category.id,
-        archived: !category.isArchived,
+      await repository.archiveCategory(category.id, archived: archive);
+      showFeedback(
+        archive ? 'Kategori diarsipkan' : 'Kategori dipulihkan',
+        archive
+            ? '${category.name} disembunyikan dari pilihan baru. Histori tetap aman.'
+            : '${category.name} kembali tersedia.',
+        duration: const Duration(seconds: 5),
+        actionLabel: 'UNDO',
+        onAction: () async {
+          await repository.archiveCategory(category.id, archived: !archive);
+          Get.closeCurrentSnackbar();
+        },
       );
-      Get.snackbar(
-        'Berhasil',
-        category.isArchived ? 'Kategori dipulihkan.' : 'Kategori diarsipkan.',
-      );
+      return true;
     } on MoneyValidationException catch (error) {
-      Get.snackbar('Kategori tidak dapat diperbarui', error.message);
+      showFeedback('Kategori tidak dapat diperbarui', error.message);
     } catch (_) {
-      Get.snackbar('Terjadi kesalahan', 'Kategori tidak dapat diperbarui.');
+      showFeedback('Terjadi kesalahan', 'Kategori tidak dapat diperbarui.');
     }
+    return false;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Kelola Kategori')),
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'Tambah Kategori',
-        onPressed: () => _add(context),
-        child: const Icon(Icons.add_rounded),
+      appBar: AppBar(title: const Text('Kategori')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showForm(context),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Tambah'),
       ),
       body: Obx(() {
-        final expense = controller.userCategories
+        final all = controller.userCategories;
+        final expense = all
             .where((item) => item.type == 'expense' && !item.isArchived)
             .toList();
-        final income = controller.userCategories
+        final income = all
             .where((item) => item.type == 'income' && !item.isArchived)
             .toList();
+        final archived = all.where((item) => item.isArchived).toList();
         return ListView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,
@@ -181,63 +196,26 @@ class CategoriesView extends GetView<MoneyController> {
             100,
           ),
           children: [
-            const SectionHeader(title: 'Pengeluaran'),
-            const SizedBox(height: AppSpacing.xs),
-            FerikCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  for (var index = 0; index < expense.length; index++) ...[
-                    _CategoryTile(
-                      name: expense[index].name,
-                      icon: iconForName(expense[index].icon),
-                      onTap: () => _add(context, category: expense[index]),
-                      onArchive: () => _archive(expense[index]),
-                    ),
-                    if (index < expense.length - 1) const Divider(),
-                  ],
-                ],
-              ),
+            _CategorySection(
+              title: 'Pengeluaran',
+              emptyText: 'Belum ada kategori pengeluaran.',
+              categories: expense,
+              onTap: (item) => _showForm(context, category: item),
             ),
             const SizedBox(height: AppSpacing.xl),
-            const SectionHeader(title: 'Pemasukan'),
-            const SizedBox(height: AppSpacing.xs),
-            FerikCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  for (var index = 0; index < income.length; index++) ...[
-                    _CategoryTile(
-                      name: income[index].name,
-                      icon: iconForName(income[index].icon),
-                      onTap: () => _add(context, category: income[index]),
-                      onArchive: () => _archive(income[index]),
-                    ),
-                    if (index < income.length - 1) const Divider(),
-                  ],
-                ],
-              ),
+            _CategorySection(
+              title: 'Pemasukan',
+              emptyText: 'Belum ada kategori pemasukan.',
+              categories: income,
+              onTap: (item) => _showForm(context, category: item),
             ),
-            if (controller.userCategories.any((item) => item.isArchived)) ...[
+            if (archived.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.xl),
-              const SectionHeader(title: 'Diarsipkan'),
-              const SizedBox(height: AppSpacing.xs),
-              FerikCard(
-                padding: EdgeInsets.zero,
-                child: Column(
-                  children: [
-                    for (final item in controller.userCategories.where(
-                      (value) => value.isArchived,
-                    ))
-                      _CategoryTile(
-                        name: item.name,
-                        icon: iconForName(item.icon),
-                        onTap: () => _add(context, category: item),
-                        onArchive: () => _archive(item),
-                        archived: true,
-                      ),
-                  ],
-                ),
+              _CategorySection(
+                title: 'Diarsipkan',
+                emptyText: '',
+                categories: archived,
+                onTap: (item) => _showForm(context, category: item),
               ),
             ],
           ],
@@ -247,40 +225,102 @@ class CategoriesView extends GetView<MoneyController> {
   }
 }
 
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({
-    required this.name,
-    required this.icon,
+class _CategorySection extends StatelessWidget {
+  const _CategorySection({
+    required this.title,
+    required this.emptyText,
+    required this.categories,
     required this.onTap,
-    required this.onArchive,
-    this.archived = false,
   });
 
-  final String name;
-  final IconData icon;
-  final VoidCallback onTap;
-  final VoidCallback onArchive;
-  final bool archived;
+  final String title;
+  final String emptyText;
+  final List<Category> categories;
+  final ValueChanged<Category> onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: context.ferikColors.primaryContainer,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionHeader(title: title),
+        const SizedBox(height: AppSpacing.xs),
+        FerikCard(
+          padding: EdgeInsets.zero,
+          child: categories.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Text(
+                    emptyText,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                )
+              : Column(
+                  children: [
+                    for (var index = 0; index < categories.length; index++) ...[
+                      ListTile(
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: context.ferikColors.primaryContainer,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: Icon(
+                            iconForName(categories[index].icon),
+                            size: 20,
+                            color: context.ferikColors.primary,
+                          ),
+                        ),
+                        title: Text(categories[index].name),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => onTap(categories[index]),
+                      ),
+                      if (index < categories.length - 1) const Divider(),
+                    ],
+                  ],
+                ),
         ),
-        child: Icon(icon, size: 20, color: context.ferikColors.primary),
-      ),
-      title: Text(name),
-      onTap: onTap,
-      trailing: IconButton(
-        tooltip: archived ? 'Pulihkan' : 'Arsipkan',
-        onPressed: onArchive,
-        icon: Icon(
-          archived ? Icons.unarchive_outlined : Icons.archive_outlined,
+      ],
+    );
+  }
+}
+
+class _IconChoice extends StatelessWidget {
+  const _IconChoice({
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.ferikColors;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: selected ? colors.primaryContainer : colors.surfaceVariant,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            border: Border.all(
+              color: selected ? colors.primary : Colors.transparent,
+              width: 1.5,
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: selected ? colors.primary : colors.secondaryText,
+          ),
         ),
       ),
     );

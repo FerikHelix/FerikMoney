@@ -7,6 +7,7 @@ import '../../repositories/money_repository.dart';
 import '../../services/currency_service.dart';
 import '../../utils/icon_mapper.dart';
 import '../../widgets/account_icon_tile.dart';
+import '../../widgets/feedback.dart';
 import '../main/money_controller.dart';
 
 Future<void> showAccountForm(
@@ -129,11 +130,11 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
       }
       if (!mounted) return;
       Navigator.pop(context);
-      Get.snackbar('Berhasil', message, snackPosition: SnackPosition.BOTTOM);
+      showFeedback('Berhasil', message);
     } on MoneyValidationException catch (error) {
-      Get.snackbar('Tidak dapat menyimpan', error.message);
+      showFeedback('Tidak dapat menyimpan', error.message);
     } catch (_) {
-      Get.snackbar('Terjadi kesalahan', 'Akun tidak dapat disimpan.');
+      showFeedback('Terjadi kesalahan', 'Akun tidak dapat disimpan.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }

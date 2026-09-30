@@ -47,18 +47,18 @@ class RecurringRepository {
       database.accounts,
     )..where((row) => row.id.equals(accountId))).getSingleOrNull();
     if (account == null || account.isArchived) {
-      throw const MoneyValidationException('Wallet tidak tersedia.');
+      throw const MoneyValidationException('Akun tidak tersedia.');
     }
     if (type == 'transfer') {
       if (destinationAccountId == null || destinationAccountId == accountId) {
-        throw const MoneyValidationException('Wallet tujuan tidak valid.');
+        throw const MoneyValidationException('Akun tujuan tidak valid.');
       }
       final destination =
           await (database.select(database.accounts)
                 ..where((row) => row.id.equals(destinationAccountId!)))
               .getSingleOrNull();
       if (destination == null || destination.isArchived) {
-        throw const MoneyValidationException('Wallet tujuan tidak tersedia.');
+        throw const MoneyValidationException('Akun tujuan tidak tersedia.');
       }
       categoryId = null;
     } else {
@@ -233,6 +233,17 @@ class RecurringRepository {
           .write(
             RecurringOccurrencesCompanion(
               status: Value(OccurrenceStatus.skipped.name),
+              updatedAt: Value(DateTime.now()),
+            ),
+          );
+
+  /// Undo for [skipOccurrence]: puts a skipped occurrence back in the queue.
+  Future<void> unskipOccurrence(String id) =>
+      (database.update(database.recurringOccurrences)
+            ..where((row) => row.id.equals(id) & row.status.equals('skipped')))
+          .write(
+            RecurringOccurrencesCompanion(
+              status: Value(OccurrenceStatus.pending.name),
               updatedAt: Value(DateTime.now()),
             ),
           );

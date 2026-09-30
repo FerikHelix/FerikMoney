@@ -98,10 +98,9 @@ Future<TestApp> pumpApp(
   final savingsRepository = SavingsRepository(database);
   Get.put(savingsRepository, permanent: true);
   Get.put(SavingsController(savingsRepository), permanent: true);
-  Get.put(
-    RecurringController(RecurringRepository(database, repository)),
-    permanent: true,
-  );
+  final recurringRepository = RecurringRepository(database, repository);
+  Get.put(recurringRepository, permanent: true);
+  Get.put(RecurringController(recurringRepository), permanent: true);
   Get.put(ReportsController(const ReportRepository()), permanent: true);
   Get.put(const ReportRepository(), permanent: true);
   addTearDown(Get.reset);

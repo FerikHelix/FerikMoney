@@ -9,7 +9,10 @@ import '../../repositories/money_repository.dart';
 import '../../repositories/recurring_repository.dart';
 import '../../services/currency_service.dart';
 import '../../widgets/amount_input.dart';
+import '../../widgets/app_sheet.dart';
+import '../../widgets/confirm_dialog.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/feedback.dart';
 import '../../widgets/ferik_card.dart';
 import '../../widgets/money_text.dart';
 import '../../widgets/transaction_type_selector.dart';
@@ -84,60 +87,69 @@ class RecurringView extends GetView<RecurringController> {
         ? RecurrenceFrequency.monthly
         : RecurrenceFrequency.values.byName(rule.frequency);
     var startDate = rule?.startDate ?? DateTime.now();
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            0,
-            AppSpacing.lg,
-            AppSpacing.lg + MediaQuery.viewInsetsOf(context).bottom,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                rule == null
-                    ? 'Tambah Transaksi Berulang'
-                    : 'Edit Transaksi Berulang',
-                style: Theme.of(context).textTheme.headlineSmall,
+    final message = await showAppSheet<String>(
+      context,
+      (sheetContext) => StatefulBuilder(
+        builder: (context, setState) => AppSheet(
+          title: rule == null
+              ? 'Tambah Transaksi Berulang'
+              : 'Edit Transaksi Berulang',
+          content: [
+            TransactionTypeSelector(
+              value: type,
+              onChanged: (value) => setState(() {
+                type = value;
+                categoryId = value == 'transfer'
+                    ? null
+                    : money.activeCategories
+                          .where((item) => item.type == value)
+                          .map((item) => item.id)
+                          .firstOrNull;
+                if (value != 'transfer') destinationId = null;
+              }),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            AmountInput(controller: amount, autofocus: rule == null),
+            const SizedBox(height: AppSpacing.sm),
+            TextField(
+              controller: name,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Nama',
+                hintText: 'Contoh: Internet bulanan',
               ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: name,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Nama',
-                  hintText: 'Contoh: Internet bulanan',
-                ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextField(
+              controller: note,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Catatan (opsional)',
               ),
-              const SizedBox(height: AppSpacing.sm),
-              TransactionTypeSelector(
-                value: type,
-                onChanged: (value) => setState(() {
-                  type = value;
-                  categoryId = value == 'transfer'
-                      ? null
-                      : money.activeCategories
-                            .where((item) => item.type == value)
-                            .map((item) => item.id)
-                            .firstOrNull;
-                  if (value != 'transfer') destinationId = null;
-                }),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            DropdownButtonFormField<String>(
+              initialValue: accountId,
+              decoration: InputDecoration(
+                labelText: type == 'transfer' ? 'Dari akun' : 'Akun',
               ),
-              const SizedBox(height: AppSpacing.sm),
-              AmountInput(controller: amount, autofocus: rule == null),
+              items: money.activeAccounts
+                  .map(
+                    (item) => DropdownMenuItem(
+                      value: item.account.id,
+                      child: Text(item.account.name),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => accountId = value),
+            ),
+            if (type == 'transfer') ...[
               const SizedBox(height: AppSpacing.sm),
               DropdownButtonFormField<String>(
-                initialValue: accountId,
-                decoration: InputDecoration(
-                  labelText: type == 'transfer' ? 'Dari wallet' : 'Wallet',
-                ),
+                initialValue: destinationId,
+                decoration: const InputDecoration(labelText: 'Ke akun'),
                 items: money.activeAccounts
+                    .where((item) => item.account.id != accountId)
                     .map(
                       (item) => DropdownMenuItem(
                         value: item.account.id,
@@ -145,123 +157,131 @@ class RecurringView extends GetView<RecurringController> {
                       ),
                     )
                     .toList(),
-                onChanged: (value) => setState(() => accountId = value),
+                onChanged: (value) => setState(() => destinationId = value),
               ),
-              if (type == 'transfer') ...[
-                const SizedBox(height: AppSpacing.sm),
-                DropdownButtonFormField<String>(
-                  initialValue: destinationId,
-                  decoration: const InputDecoration(labelText: 'Ke wallet'),
-                  items: money.activeAccounts
-                      .where((item) => item.account.id != accountId)
-                      .map(
-                        (item) => DropdownMenuItem(
-                          value: item.account.id,
-                          child: Text(item.account.name),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) => setState(() => destinationId = value),
-                ),
-              ] else ...[
-                const SizedBox(height: AppSpacing.sm),
-                DropdownButtonFormField<String>(
-                  initialValue: categoryId,
-                  decoration: const InputDecoration(labelText: 'Kategori'),
-                  items: money.activeCategories
-                      .where((item) => item.type == type)
-                      .map(
-                        (item) => DropdownMenuItem(
-                          value: item.id,
-                          child: Text(item.name),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) => setState(() => categoryId = value),
-                ),
-              ],
+            ] else ...[
               const SizedBox(height: AppSpacing.sm),
-              DropdownButtonFormField<RecurrenceFrequency>(
-                initialValue: frequency,
-                decoration: const InputDecoration(labelText: 'Frekuensi'),
-                items: RecurrenceFrequency.values
+              DropdownButtonFormField<String>(
+                initialValue: categoryId,
+                decoration: const InputDecoration(labelText: 'Kategori'),
+                items: money.activeCategories
+                    .where((item) => item.type == type)
                     .map(
                       (item) => DropdownMenuItem(
-                        value: item,
-                        child: Text(item.label),
+                        value: item.id,
+                        child: Text(item.name),
                       ),
                     )
                     .toList(),
-                onChanged: (value) =>
-                    setState(() => frequency = value ?? frequency),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final value = await showDatePicker(
-                    context: context,
-                    initialDate: startDate,
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime.now().add(const Duration(days: 36500)),
-                  );
-                  if (value != null) {
-                    setState(() {
-                      startDate = DateTime(
-                        value.year,
-                        value.month,
-                        value.day,
-                        startDate.hour,
-                        startDate.minute,
-                      );
-                    });
-                  }
-                },
-                icon: const Icon(Icons.event_repeat_outlined),
-                label: Text(
-                  'Mulai ${DateFormat('d MMMM yyyy', 'id_ID').format(startDate)}',
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              TextField(
-                controller: note,
-                decoration: const InputDecoration(
-                  labelText: 'Catatan (opsional)',
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              FilledButton(
-                onPressed: accountId == null
-                    ? null
-                    : () async {
-                        try {
-                          await repository.saveRule(
-                            id: rule?.id,
-                            name: name.text,
-                            type: type,
-                            amount: currency.parseInput(amount.text),
-                            accountId: accountId!,
-                            destinationAccountId: destinationId,
-                            categoryId: categoryId,
-                            note: note.text,
-                            frequency: frequency,
-                            startDate: startDate,
-                          );
-                          await repository.generateDue();
-                          if (context.mounted) Navigator.pop(context);
-                        } on MoneyValidationException catch (error) {
-                          Get.snackbar('Tidak dapat menyimpan', error.message);
-                        }
-                      },
-                child: const Text('Simpan Jadwal'),
+                onChanged: (value) => setState(() => categoryId = value),
               ),
             ],
+            const SizedBox(height: AppSpacing.sm),
+            DropdownButtonFormField<RecurrenceFrequency>(
+              initialValue: frequency,
+              decoration: const InputDecoration(labelText: 'Frekuensi'),
+              items: RecurrenceFrequency.values
+                  .map(
+                    (item) =>
+                        DropdownMenuItem(value: item, child: Text(item.label)),
+                  )
+                  .toList(),
+              onChanged: (value) =>
+                  setState(() => frequency = value ?? frequency),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final value = await showDatePicker(
+                  context: context,
+                  initialDate: startDate,
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime.now().add(const Duration(days: 36500)),
+                );
+                if (value != null) {
+                  setState(() {
+                    startDate = DateTime(
+                      value.year,
+                      value.month,
+                      value.day,
+                      startDate.hour,
+                      startDate.minute,
+                    );
+                  });
+                }
+              },
+              icon: const Icon(Icons.event_repeat_outlined),
+              label: Text(
+                'Mulai ${DateFormat('d MMMM yyyy', 'id_ID').format(startDate)}',
+              ),
+            ),
+            if (rule != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
+                onPressed: () async {
+                  final confirmed = await confirmDestructive(
+                    context,
+                    title: 'Hapus jadwal?',
+                    message:
+                        '${rule.name} tidak akan dibuat lagi. Transaksi yang sudah tercatat tidak berubah.',
+                  );
+                  if (!confirmed) return;
+                  await repository.deleteRule(rule.id);
+                  if (sheetContext.mounted) {
+                    Navigator.pop(sheetContext, 'Jadwal dihapus.');
+                  }
+                },
+                icon: const Icon(Icons.delete_outline_rounded),
+                label: const Text('Hapus jadwal'),
+              ),
+            ],
+          ],
+          footer: AsyncFilledButton(
+            label: 'Simpan Jadwal',
+            icon: Icons.check_rounded,
+            onPressed: accountId == null
+                ? null
+                : () async {
+                    try {
+                      await repository.saveRule(
+                        id: rule?.id,
+                        name: name.text,
+                        type: type,
+                        amount: currency.parseInput(amount.text),
+                        accountId: accountId!,
+                        destinationAccountId: destinationId,
+                        categoryId: categoryId,
+                        note: note.text,
+                        frequency: frequency,
+                        startDate: startDate,
+                      );
+                      await repository.generateDue();
+                      if (sheetContext.mounted) {
+                        Navigator.pop(
+                          sheetContext,
+                          rule == null
+                              ? 'Jadwal ditambahkan.'
+                              : 'Jadwal diperbarui.',
+                        );
+                      }
+                    } on MoneyValidationException catch (error) {
+                      showFeedback('Tidak dapat menyimpan', error.message);
+                    } catch (_) {
+                      showFeedback(
+                        'Terjadi kesalahan',
+                        'Jadwal tidak dapat disimpan.',
+                      );
+                    }
+                  },
           ),
         ),
       ),
     );
-    name.dispose();
-    amount.dispose();
-    note.dispose();
+    disposeAfterSheet([name, amount, note]);
+    if (message != null) showFeedback('Berhasil', message);
   }
 
   @override
@@ -343,7 +363,6 @@ class RecurringView extends GetView<RecurringController> {
                             const SizedBox(height: 4),
                             MoneyText(
                               amount: rule.amount,
-                              visible: true,
                               tone: rule.type == 'income'
                                   ? MoneyTone.income
                                   : rule.type == 'expense'
@@ -358,19 +377,6 @@ class RecurringView extends GetView<RecurringController> {
                         value: !rule.isPaused,
                         onChanged: (value) => Get.find<RecurringRepository>()
                             .setPaused(rule.id, paused: !value),
-                      ),
-                      PopupMenuButton<String>(
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _showForm(context, rule: rule);
-                          } else {
-                            Get.find<RecurringRepository>().deleteRule(rule.id);
-                          }
-                        },
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(value: 'edit', child: Text('Edit')),
-                          PopupMenuItem(value: 'delete', child: Text('Hapus')),
-                        ],
                       ),
                     ],
                   ),
@@ -415,7 +421,6 @@ class _PendingCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.xxs),
             MoneyText(
               amount: rule!.amount,
-              visible: true,
               tone: rule!.type == 'income'
                   ? MoneyTone.income
                   : rule!.type == 'expense'
@@ -429,7 +434,19 @@ class _PendingCard extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => repository.skipOccurrence(occurrence.id),
+                  onPressed: () async {
+                    await repository.skipOccurrence(occurrence.id);
+                    showFeedback(
+                      'Dilewati',
+                      '${rule?.name ?? 'Jadwal'} dilewati untuk kali ini.',
+                      duration: const Duration(seconds: 5),
+                      actionLabel: 'UNDO',
+                      onAction: () async {
+                        await repository.unskipOccurrence(occurrence.id);
+                        Get.closeCurrentSnackbar();
+                      },
+                    );
+                  },
                   child: const Text('Lewati'),
                 ),
               ),

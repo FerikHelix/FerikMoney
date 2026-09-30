@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 
 import '../../app/theme/design_tokens.dart';
 import '../../widgets/ferik_card.dart';
+import '../../widgets/page_header.dart';
+import '../../widgets/section_header.dart';
 import '../accounts/accounts_view.dart';
 import '../budgets/budgets_view.dart';
 import '../recurring/recurring_controller.dart';
@@ -27,19 +29,37 @@ class MoreView extends StatelessWidget {
           100,
         ),
         children: [
-          Text('Lainnya', style: Theme.of(context).textTheme.headlineMedium),
+          const PageHeader('Lainnya', padding: EdgeInsets.zero),
           const SizedBox(height: AppSpacing.md),
+          const SectionHeader(title: 'Kelola'),
+          const SizedBox(height: AppSpacing.xs),
           FerikCard(
             padding: EdgeInsets.zero,
             child: Column(
               children: [
                 _MoreTile(
                   icon: Icons.account_balance_wallet_outlined,
-                  title: 'Wallet',
-                  subtitle: 'Kelola akun dan saldo',
+                  title: 'Akun',
+                  subtitle: 'Tunai, bank, dan e-wallet beserta saldonya',
                   onTap: () => Get.to(() => const AccountsView()),
                 ),
                 const Divider(height: 1),
+                _MoreTile(
+                  icon: Icons.category_outlined,
+                  title: 'Kategori',
+                  subtitle: 'Atur kategori pemasukan dan pengeluaran',
+                  onTap: () => Get.to(() => const CategoriesView()),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          const SectionHeader(title: 'Perencanaan'),
+          const SizedBox(height: AppSpacing.xs),
+          FerikCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
                 _MoreTile(
                   icon: Icons.pie_chart_outline_rounded,
                   title: 'Budget',
@@ -63,17 +83,10 @@ class MoreView extends StatelessWidget {
                     onTap: () => Get.to(() => const RecurringView()),
                   ),
                 ),
-                const Divider(height: 1),
-                _MoreTile(
-                  icon: Icons.category_outlined,
-                  title: 'Kategori',
-                  subtitle: 'Atur kategori pemasukan dan pengeluaran',
-                  onTap: () => Get.to(() => const CategoriesView()),
-                ),
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.lg),
           FerikCard(
             padding: EdgeInsets.zero,
             child: _MoreTile(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -12,29 +14,40 @@ import '../../services/backup_service.dart';
 import '../../services/currency_service.dart';
 import '../../services/privacy_service.dart';
 import '../../services/theme_service.dart';
+import '../../widgets/feedback.dart';
 import '../../widgets/ferik_card.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
 
-  Future<void> _export(BuildContext context) async {
-    final action = await showModalBottomSheet<String>(
+  /// Small "save or share" chooser used by both JSON and CSV export.
+  Future<String?> _chooseExportAction(
+    BuildContext context, {
+    required String saveLabel,
+    required String shareLabel,
+  }) {
+    return showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (context) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            0,
+            AppSpacing.md,
+            AppSpacing.md,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 leading: const Icon(Icons.save_alt_rounded),
-                title: const Text('Simpan file JSON'),
+                title: Text(saveLabel),
                 onTap: () => Navigator.pop(context, 'save'),
               ),
               ListTile(
                 leading: const Icon(Icons.share_outlined),
-                title: const Text('Bagikan backup'),
+                title: Text(shareLabel),
                 onTap: () => Navigator.pop(context, 'share'),
               ),
             ],
@@ -42,23 +55,60 @@ class SettingsView extends StatelessWidget {
         ),
       ),
     );
-    if (action == null) return;
+  }
+
+  /// Blocks the screen with a spinner while [task] runs, so a slow backup or
+  /// restore never looks frozen or gets tapped twice.
+  Future<T> _withProgress<T>(BuildContext context, Future<T> Function() task) {
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const PopScope(
+          canPop: false,
+          child: Dialog(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.lg),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox.square(
+                    dimension: 24,
+                    child: CircularProgressIndicator(strokeWidth: 3),
+                  ),
+                  SizedBox(width: AppSpacing.md),
+                  Text('Memproses...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    return task().whenComplete(() {
+      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+    });
+  }
+
+  Future<void> _export(BuildContext context) async {
+    final action = await _chooseExportAction(
+      context,
+      saveLabel: 'Simpan file JSON',
+      shareLabel: 'Bagikan backup',
+    );
+    if (action == null || !context.mounted) return;
     try {
       final service = Get.find<BackupService>();
       if (action == 'save') {
-        final path = await service.saveBackup();
+        final path = await _withProgress(context, service.saveBackup);
         if (path != null) {
-          Get.snackbar('Export selesai', 'Backup JSON berhasil disimpan.');
+          showFeedback('Export selesai', 'Backup JSON berhasil disimpan.');
         }
       } else {
         await service.shareBackup();
       }
     } catch (_) {
-      Get.snackbar(
-        'Export gagal',
-        'Backup tidak dapat dibuat atau disimpan.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showFeedback('Export gagal', 'Backup tidak dapat dibuat atau disimpan.');
     }
   }
 
@@ -68,20 +118,15 @@ class SettingsView extends StatelessWidget {
       final backup = await service.pickAndValidateBackup();
       if (backup == null || !context.mounted) return;
       final confirmed = await _confirmRestore(context, backup);
-      if (!confirmed) return;
-      await service.restore(backup);
-      Get.snackbar(
-        'Restore selesai',
-        'Data FerikMoney berhasil dipulihkan.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      if (!confirmed || !context.mounted) return;
+      await _withProgress(context, () => service.restore(backup));
+      showFeedback('Restore selesai', 'Data FerikMoney berhasil dipulihkan.');
     } on BackupValidationException catch (error) {
-      Get.snackbar('Backup tidak valid', error.message);
+      showFeedback('Backup tidak valid', error.message);
     } catch (_) {
-      Get.snackbar(
+      showFeedback(
         'Import gagal',
         'Data lama tetap aman. Periksa file lalu coba lagi.',
-        snackPosition: SnackPosition.BOTTOM,
       );
     }
   }
@@ -138,47 +183,31 @@ class SettingsView extends StatelessWidget {
   }
 
   Future<void> _exportCsv(BuildContext context) async {
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.save_alt_rounded),
-              title: const Text('Simpan CSV'),
-              onTap: () => Navigator.pop(context, 'save'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.share_outlined),
-              title: const Text('Bagikan CSV'),
-              onTap: () => Navigator.pop(context, 'share'),
-            ),
-          ],
-        ),
-      ),
+    final action = await _chooseExportAction(
+      context,
+      saveLabel: 'Simpan CSV',
+      shareLabel: 'Bagikan CSV',
     );
-    if (action == null) return;
+    if (action == null || !context.mounted) return;
     try {
       final service = Get.find<BackupService>();
       if (action == 'save') {
-        final path = await service.saveCsv();
+        final path = await _withProgress(context, service.saveCsv);
         if (path != null) {
-          Get.snackbar('Export selesai', 'CSV berhasil disimpan.');
+          showFeedback('Export selesai', 'CSV berhasil disimpan.');
         }
       } else {
         await service.shareCsv();
       }
     } catch (_) {
-      Get.snackbar('Export gagal', 'CSV transaksi tidak dapat dibuat.');
+      showFeedback('Export gagal', 'CSV transaksi tidak dapat dibuat.');
     }
   }
 
   Future<void> _chooseCurrency(BuildContext context) async {
     final database = Get.find<AppDatabase>();
     if (!await database.canChangeCurrency()) {
-      Get.snackbar(
+      showFeedback(
         'Currency terkunci',
         'Currency hanya dapat diganti sebelum ada saldo atau data finansial.',
       );
@@ -213,31 +242,44 @@ class SettingsView extends StatelessWidget {
   }
 
   Future<void> _reset(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset semua data?'),
-        content: const Text(
-          'Akun, transaksi, budget, rule berulang, dan savings goal akan dihapus permanen. Tema tetap dipertahankan.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+    while (true) {
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Reset semua data?'),
+          content: const Text(
+            'Akun, transaksi, budget, jadwal berulang, dan target tabungan akan dihapus permanen. Tema tetap dipertahankan.\n\nSaran: simpan backup dulu supaya data bisa dikembalikan.',
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'cancel'),
+              child: const Text('Batal'),
             ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Reset Data'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    await Get.find<BackupService>().resetData();
-    Get.snackbar('Data direset', 'Kategori default telah dibuat kembali.');
+            OutlinedButton(
+              onPressed: () => Navigator.pop(context, 'backup'),
+              child: const Text('Backup dulu'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+              onPressed: () => Navigator.pop(context, 'reset'),
+              child: const Text('Reset'),
+            ),
+          ],
+        ),
+      );
+      if (!context.mounted) return;
+      if (choice == 'backup') {
+        await _export(context);
+        if (!context.mounted) return;
+        continue;
+      }
+      if (choice != 'reset') return;
+      break;
+    }
+    await _withProgress(context, Get.find<BackupService>().resetData);
+    showFeedback('Data direset', 'Kategori default telah dibuat kembali.');
   }
 
   @override
@@ -294,7 +336,7 @@ class SettingsView extends StatelessWidget {
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.account_balance_wallet_outlined),
-                    title: const Text('Wallet default'),
+                    title: const Text('Akun default'),
                     trailing: DropdownButton<String?>(
                       value:
                           money.activeAccounts.any(

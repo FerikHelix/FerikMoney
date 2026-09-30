@@ -12,6 +12,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/expense_donut_chart.dart';
 import '../../widgets/ferik_card.dart';
 import '../../widgets/money_text.dart';
+import '../../widgets/page_header.dart';
 import '../main/main_tab.dart';
 import '../main/money_controller.dart';
 import 'reports_controller.dart';
@@ -44,7 +45,7 @@ class ReportsView extends GetView<ReportsController> {
             100,
           ),
           children: [
-            Text('Laporan', style: Theme.of(context).textTheme.headlineMedium),
+            const PageHeader('Laporan', padding: EdgeInsets.zero),
             const SizedBox(height: AppSpacing.sm),
             SegmentedButton<FinancePeriod>(
               showSelectedIcon: false,

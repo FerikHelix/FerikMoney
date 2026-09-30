@@ -13,6 +13,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/ferik_card.dart';
 import '../../widgets/finance_activity_tile.dart';
 import '../../widgets/money_text.dart';
+import '../../widgets/page_header.dart';
 import '../main/money_controller.dart';
 import '../savings/goal_transfer_sheet.dart';
 import '../savings/savings_controller.dart';
@@ -430,7 +431,7 @@ class _HistoryViewState extends State<HistoryView> {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        'Dompet',
+                        'Akun',
                         style: Theme.of(context).textTheme.labelMedium,
                       ),
                       const SizedBox(height: AppSpacing.xs),
@@ -520,21 +521,7 @@ class _HistoryViewState extends State<HistoryView> {
       bottom: false,
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.sm,
-            ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Riwayat',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-            ),
-          ),
+          const PageHeader('Riwayat'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Row(
@@ -567,7 +554,7 @@ class _HistoryViewState extends State<HistoryView> {
                   isLabelVisible: _moreFilterCount > 0,
                   label: Text('$_moreFilterCount'),
                   child: IconButton.filledTonal(
-                    tooltip: 'Filter dompet dan kategori',
+                    tooltip: 'Filter akun dan kategori',
                     onPressed: _showMoreFilters,
                     icon: const Icon(Icons.tune_rounded),
                   ),
@@ -617,7 +604,7 @@ class _HistoryViewState extends State<HistoryView> {
                       Padding(
                         padding: const EdgeInsets.only(right: AppSpacing.xs),
                         child: InputChip(
-                          label: Text('Dompet: $accountName'),
+                          label: Text('Akun: $accountName'),
                           onDeleted: () => setState(() => _accountId = null),
                         ),
                       ),

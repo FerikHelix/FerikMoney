@@ -96,7 +96,7 @@ class SavingsRepository {
       database.accounts,
     )..where((row) => row.id.equals(accountId))).getSingleOrNull();
     if (account == null || account.isArchived) {
-      throw const MoneyValidationException('Wallet tidak tersedia.');
+      throw const MoneyValidationException('Akun tidak tersedia.');
     }
     if (type == GoalTransferType.withdrawal) {
       final progress = await database.watchSavingsGoalsWithProgress().first;

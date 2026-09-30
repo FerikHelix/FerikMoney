@@ -108,8 +108,8 @@ class AccountDetailView extends GetView<MoneyController> {
               padding: const EdgeInsets.only(right: AppSpacing.xs),
               child: IconButton(
                 tooltip: item.account.isArchived
-                    ? 'Pulihkan Wallet'
-                    : 'Arsipkan Wallet',
+                    ? 'Pulihkan Akun'
+                    : 'Arsipkan Akun',
                 onPressed: () => _archive(
                   item.account.name,
                   archived: item.account.isArchived,

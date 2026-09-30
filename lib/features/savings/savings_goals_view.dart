@@ -107,8 +107,7 @@ class SavingsGoalsView extends GetView<SavingsController> {
         ),
       ),
     );
-    name.dispose();
-    amount.dispose();
+    disposeAfterSheet([name, amount]);
     if (message != null) showFeedback('Berhasil', message);
   }
 
@@ -232,8 +231,7 @@ class SavingsGoalsView extends GetView<SavingsController> {
         ),
       ),
     );
-    amount.dispose();
-    note.dispose();
+    disposeAfterSheet([amount, note]);
     if (message != null) showFeedback('Berhasil', message);
   }
 
