@@ -1,0 +1,248 @@
+{
+  "@@locale": "id",
+  "appName": "FerikMoney",
+  "navHome": "Beranda",
+  "navWallets": "Kantong",
+  "navAnalytics": "Analitik",
+  "navSubscriptions": "Langganan",
+  "navDebts": "Utang",
+  "settings": "Pengaturan",
+  "cancel": "Batal",
+  "save": "Simpan",
+  "delete": "Hapus",
+  "edit": "Ubah",
+  "archive": "Arsipkan",
+  "close": "Tutup",
+  "add": "Tambah",
+  "retry": "Coba lagi",
+  "seeAll": "Lihat semua",
+  "allWallets": "Semua kantong",
+  "theme": "Tema",
+  "themeSystem": "Ikuti sistem",
+  "themeLight": "Terang",
+  "themeDark": "Gelap",
+  "about": "Tentang",
+  "versionLabel": "Versi {version}",
+  "@versionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "notFound": "Halaman tidak ditemukan",
+  "totalBalance": "Total saldo",
+  "thisMonth": "Bulan ini",
+  "income": "Pemasukan",
+  "expense": "Pengeluaran",
+  "net": "Selisih",
+  "recentActivity": "Transaksi terakhir",
+  "emptyTransactionsBody": "Belum ada transaksi.",
+  "addTransaction": "Tambah transaksi",
+  "addExpense": "Tambah pengeluaran",
+  "addIncome": "Tambah pemasukan",
+  "addTransfer": "Transfer",
+  "subscriptionDue": "Langganan jatuh tempo",
+  "subscriptionDueCount": "{count} langganan jatuh tempo",
+  "@subscriptionDueCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dismiss": "Tutup",
+  "firstWalletTitle": "Buat kantong pertama",
+  "firstWalletBody": "Tambahkan kantong untuk mulai mencatat uang.",
+  "skipForNow": "Lewati dulu",
+  "createWallet": "Buat kantong",
+  "walletsTitle": "Kantong",
+  "activeWallets": "Aktif",
+  "archivedWallets": "Diarsipkan",
+  "noWalletsBody": "Belum ada kantong.",
+  "walletName": "Nama kantong",
+  "walletNameRequired": "Nama kantong wajib diisi",
+  "walletNameDuplicate": "Nama kantong sudah dipakai",
+  "duplicateName": "Nama sudah dipakai",
+  "walletType": "Jenis",
+  "typeCash": "Tunai",
+  "typeBank": "Bank",
+  "typeEwallet": "E-Wallet",
+  "typeOther": "Lainnya",
+  "openingBalance": "Saldo awal",
+  "iconLabel": "Ikon",
+  "colorLabel": "Warna",
+  "editWallet": "Ubah kantong",
+  "newWallet": "Kantong baru",
+  "walletDetail": "Detail kantong",
+  "archiveWallet": "Arsipkan kantong",
+  "archiveWalletBody": "Kantong disembunyikan dari pilihan transaksi baru. Riwayatnya tetap tersimpan.",
+  "deleteWallet": "Hapus kantong",
+  "deleteWalletBody": "Kantong dan saldo awalnya dihapus permanen.",
+  "lastWalletBlocked": "Minimal satu kantong harus tetap aktif.",
+  "walletHasTransactions": "Kantong ini punya transaksi. Arsipkan saja.",
+  "walletSaved": "Kantong disimpan",
+  "walletArchived": "Kantong diarsipkan",
+  "walletDeleted": "Kantong dihapus",
+  "negativeBalance": "Saldo minus",
+  "transactionHistory": "Riwayat transaksi",
+  "newExpense": "Pengeluaran baru",
+  "newIncome": "Pemasukan baru",
+  "newTransfer": "Transfer baru",
+  "amount": "Nominal",
+  "amountRequired": "Nominal harus lebih dari Rp 0",
+  "amountTooLarge": "Nominal maksimal Rp 999.999.999.999",
+  "date": "Tanggal",
+  "note": "Catatan",
+  "optional": "Opsional",
+  "wallet": "Kantong",
+  "category": "Kategori",
+  "sourceWallet": "Dari kantong",
+  "destinationWallet": "Ke kantong",
+  "transferFee": "Biaya transfer",
+  "sameWallet": "Kantong asal dan tujuan harus berbeda",
+  "insufficientBalance": "Saldo tidak cukup. Simpan tetap membuat saldo minus.",
+  "saveExpense": "Simpan pengeluaran",
+  "saveIncome": "Simpan pemasukan",
+  "saveTransfer": "Simpan transfer",
+  "expenseSaved": "Pengeluaran disimpan",
+  "incomeSaved": "Pemasukan disimpan",
+  "transferSaved": "Transfer disimpan",
+  "deleteTransaction": "Hapus transaksi",
+  "deleteTransactionBody": "Transaksi dihapus dan saldo dikembalikan.",
+  "transactionDeleted": "Transaksi dihapus",
+  "categoryManagement": "Kategori",
+  "newCategory": "Kategori baru",
+  "categoryName": "Nama kategori",
+  "categoryNameRequired": "Nama kategori wajib diisi",
+  "expenseCategory": "Kategori pengeluaran",
+  "incomeCategory": "Kategori pemasukan",
+  "archiveCategory": "Arsipkan kategori",
+  "categoryArchived": "Kategori diarsipkan",
+  "categorySaved": "Kategori disimpan",
+  "noCategoriesBody": "Belum ada kategori.",
+  "dueDayInvalid": "Tanggal harus 1 sampai 31",
+  "leadDaysInvalid": "Isi 0 sampai 30 hari",
+  "transferCategory": "Biaya Transfer",
+  "emptyHistoryBody": "Transaksi yang dicatat akan muncul di sini.",
+  "futureDate": "Tanggal tidak boleh setelah hari ini.",
+  "discardChanges": "Buang perubahan",
+  "discardChangesBody": "Perubahan yang belum disimpan akan hilang.",
+  "discard": "Buang",
+  "negativeBalanceConfirm": "Saldo akan menjadi minus. Lanjutkan?",
+  "continueLabel": "Lanjutkan",
+  "analyticsTitle": "Analitik",
+  "selectMonth": "Pilih bulan",
+  "noDataMonth": "Tidak ada data pada bulan ini.",
+  "noDataMonthBody": "Catat transaksi untuk melihat ringkasan.",
+  "expenseBreakdown": "Pengeluaran per kategori",
+  "incomeBreakdown": "Pemasukan per kategori",
+  "trendTitle": "Tren 6 bulan",
+  "incomeShort": "Masuk",
+  "expenseShort": "Keluar",
+  "percentage": "{value}%",
+  "@percentage": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionsTitle": "Langganan",
+  "newSubscription": "Langganan baru",
+  "editSubscription": "Ubah langganan",
+  "subscriptionName": "Nama langganan",
+  "subscriptionNameRequired": "Nama langganan wajib diisi",
+  "cycle": "Siklus",
+  "monthly": "Bulanan",
+  "yearly": "Tahunan",
+  "dueDay": "Tanggal jatuh tempo",
+  "dueMonth": "Bulan jatuh tempo",
+  "leadDays": "Ingatkan sebelum",
+  "daysBefore": "{count} hari",
+  "@daysBefore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "activeLabel": "Aktif",
+  "inactiveLabel": "Nonaktif",
+  "pay": "Bayar",
+  "skipCycle": "Lewati siklus",
+  "skipCycleBody": "Jatuh tempo maju satu siklus tanpa mencatat pengeluaran.",
+  "skip": "Lewati",
+  "subscriptionSkipped": "Siklus dilewati",
+  "subscriptionSaved": "Langganan disimpan",
+  "nextDue": "Jatuh tempo {date}",
+  "@nextDue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "overdue": "Terlambat",
+  "noSubscriptionsBody": "Belum ada langganan.",
+  "dueSoon": "Jatuh tempo",
+  "deactivate": "Nonaktifkan",
+  "activate": "Aktifkan",
+  "debtsTitle": "Utang",
+  "utang": "Utang",
+  "piutang": "Piutang",
+  "newDebt": "Catat utang",
+  "newReceivable": "Catat piutang",
+  "counterparty": "Nama pihak",
+  "counterpartyRequired": "Nama pihak wajib diisi",
+  "principal": "Pokok",
+  "startDate": "Tanggal mulai",
+  "dueDate": "Jatuh tempo",
+  "remaining": "Sisa",
+  "settled": "Lunas",
+  "openStatus": "Belum lunas",
+  "recordPayment": "Catat pembayaran",
+  "paymentAmount": "Nominal pembayaran",
+  "paymentTooLarge": "Pembayaran maksimal {amount}",
+  "@paymentTooLarge": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentSaved": "Pembayaran disimpan",
+  "debtSaved": "Utang disimpan",
+  "receivableSaved": "Piutang disimpan",
+  "totalUtang": "Total utang",
+  "totalPiutang": "Total piutang",
+  "noDebtsBody": "Belum ada utang atau piutang.",  "commitToMoney": "Catat ke saldo",
+  "commitHint": "Membuat transaksi di kantong terpilih.",
+  "commitIncomeTo": "Pemasukan ke {wallet}",
+  "@commitIncomeTo": {
+    "placeholders": {
+      "wallet": {
+        "type": "String"
+      }
+    }
+  },
+  "commitExpenseFrom": "Pengeluaran dari {wallet}",
+  "@commitExpenseFrom": {
+    "placeholders": {
+      "wallet": {
+        "type": "String"
+      }
+    }
+  },
+  "committedLabel": "Sudah dicatat",
+  "deleteDebt": "Hapus catatan",
+  "deleteDebtBody": "Catatan dan pembayarannya dihapus. Transaksi yang sudah dicatat tetap ada.",
+  "debtDeleted": "Catatan dihapus",
+  "paymentsTitle": "Pembayaran",
+  "noPaymentsBody": "Belum ada pembayaran.",
+  "dataStoredLocally": "Data disimpan di perangkat ini.",
+  "saveFailed": "Gagal menyimpan. Coba lagi.",
+  "loadFailed": "Gagal memuat data.",
+  "requiredField": "Wajib diisi",
+  "invalidNumber": "Masukkan angka"
+}
