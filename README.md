@@ -10,6 +10,7 @@ Offline-first personal money app for Android. It records income, expenses, and t
 
 ## Contents
 
+- [Download](#download)
 - [Features](#features)
 - [Stack](#stack)
 - [Requirements](#requirements)
@@ -21,6 +22,19 @@ Offline-first personal money app for Android. It records income, expenses, and t
 - [CI and releases](#ci-and-releases)
 - [Offline behavior](#offline-behavior)
 - [Troubleshooting](#troubleshooting)
+
+## Download
+
+Latest release: <https://github.com/FerikHelix/FerikMoney/releases/latest>
+
+| File | Use |
+| --- | --- |
+| `ferik-money-<version>-arm64-v8a.apk` | Most Android phones |
+| `ferik-money-<version>-armeabi-v7a.apk` | Older 32-bit devices |
+| `ferik-money-<version>-x86_64.apk` | Emulators |
+| `ferik-money-<version>.aab` | Google Play upload |
+
+Enable "Install unknown apps" for the browser or file manager you use, then install the APK matching the device.
 
 ## Features
 
