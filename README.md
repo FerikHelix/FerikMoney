@@ -97,10 +97,11 @@ Package: `com.ferik.ferik_money`.
 | `fvm flutter gen-l10n` | Regenerate localizations from `lib/l10n/app_id.arb` |
 | `fvm flutter build apk --debug` | Debug APK |
 | `fvm flutter build apk --release` | Universal release APK |
+| `fvm flutter build apk --release --split-per-abi` | Smaller per-ABI APKs |
 | `fvm flutter build appbundle --release` | Play Store AAB |
 | `fvm flutter build apk --release --target-platform android-arm64 --analyze-size` | Size analysis |
 
-Current sizes: universal release APK about 59.5 MB; arm64 size-analysis build about 20.7 MB. Material Symbols Rounded is tree-shaken from 15.1 MB to about 145 KB.
+Current split APK sizes: arm64-v8a 20.4 MB, armeabi-v7a 18.4 MB, x86_64 21.7 MB. Universal APK is 59.5 MB. Material Symbols Rounded is tree-shaken from 15.1 MB to about 145 KB.
 
 ## Project layout
 
@@ -228,11 +229,15 @@ git push origin v1.0.0
 1. Checks out the tag and derives `versionName` from it (`v1.0.0` → `1.0.0`).
 2. Runs analysis and tests.
 3. Restores the keystore when `ANDROID_KEYSTORE_BASE64` is set.
-4. Builds the universal APK and AAB with `buildNumber = GITHUB_RUN_NUMBER`.
+4. Builds split APKs and an AAB with `buildNumber = GITHUB_RUN_NUMBER`.
 5. Publishes a GitHub Release containing:
-   - `ferik-money-<version>.apk`
+   - `ferik-money-<version>-arm64-v8a.apk`
+   - `ferik-money-<version>-armeabi-v7a.apk`
+   - `ferik-money-<version>-x86_64.apk`
    - `ferik-money-<version>.aab`
    - `SHA256SUMS.txt`
+
+Choose the APK for the phone: `arm64-v8a` for most Android phones, `armeabi-v7a` for older 32-bit devices, `x86_64` for emulators.
 
 To rebuild an existing tag, run **Actions → Release → Run workflow** and enter the tag. If signing secrets are missing, the workflow warns and produces debug-signed artifacts; configure signing before publishing to users.
 
